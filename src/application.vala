@@ -28,12 +28,11 @@ namespace Danbooru {
                 }
 
                 /* ============================================================
-                   AppBar — compact, even control rhythm
+                   AppBar — fixed control height (32px), even padding
                    ============================================================ */
                 .app-bar {
                     background: #181b22;
-                    min-height: 40px;
-                    padding: 5px 12px;
+                    padding: 6px 12px;
                     border-radius: 0;
                 }
                 .app-bar.top {
@@ -48,25 +47,20 @@ namespace Danbooru {
                 .app-bar-sep {
                     background: #3a4252;
                     min-width: 1px;
-                    min-height: 16px;
-                    margin: 0 4px;
-                    opacity: 1;
+                    min-height: 18px;
+                    margin: 0 2px;
                 }
 
                 .bar-label {
-                    font-size: 0.72em;
-                    font-weight: 600;
+                    font-size: 0.78em;
+                    font-weight: 500;
                     color: #8b93a2;
-                    letter-spacing: 0.3px;
-                    margin-inline-start: 2px;
-                    margin-inline-end: 0;
                 }
                 .bar-status {
-                    font-size: 0.8em;
-                    font-weight: 600;
+                    font-size: 0.82em;
+                    font-weight: 500;
                     color: #a8b0be;
-                    min-width: 5.5em;
-                    padding: 0 2px;
+                    min-width: 5em;
                 }
                 .bar-title {
                     font-size: 0.9em;
@@ -80,36 +74,60 @@ namespace Danbooru {
                     color: #e6e8ee;
                 }
 
-                /* One control height across the bar */
-                .app-bar entry,
-                .app-bar searchentry,
-                .app-bar spinbutton,
-                .app-bar dropdown,
-                .app-bar button {
-                    min-height: 28px;
-                    font-size: 0.82em;
+                /*
+                 * Fixed 32px control height.
+                 * DropDown: style ONLY the inner toggle button — styling both
+                 * the shell and the button draws double borders / offset rings.
+                 */
+                .app-bar button.bar-control,
+                .app-bar entry.bar-control,
+                .app-bar searchentry.bar-control {
+                    min-height: 32px;
+                    padding: 0 12px;
+                    font-size: 0.84em;
+                    border-radius: 6px;
                 }
-                .app-bar button {
+                .app-bar button.bar-icon {
+                    min-width: 32px;
+                    max-width: 32px;
+                    padding: 0;
+                }
+                .app-bar button.bar-icon image {
+                    margin: 0;
+                    -gtk-icon-size: 16px;
+                }
+                .app-bar searchentry.bar-control {
                     padding: 0 10px;
-                    min-width: 28px;
                 }
-                /* Icon-only buttons (search, clear, refresh, back) stay square */
-                .app-bar button image {
+                .app-bar searchentry.bar-control > image,
+                .app-bar searchentry.bar-control > text {
+                    margin: 0;
+                    min-height: 0;
+                }
+                /* Shell is invisible; chrome lives on the child button only */
+                .app-bar dropdown.bar-control {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                    min-height: 32px;
+                    border-radius: 0;
+                }
+                .app-bar dropdown.bar-control > button {
+                    min-height: 32px;
+                    padding: 0 10px;
+                    font-size: 0.84em;
+                    border-radius: 6px;
+                }
+                .app-bar dropdown.bar-control > button > box {
                     margin: 0;
                     padding: 0;
                 }
                 .app-bar switch {
                     margin: 0;
-                }
-                .app-bar dropdown {
-                    min-width: 0;
-                }
-                .app-bar spinbutton {
-                    min-width: 72px;
-                }
-                .app-bar searchentry,
-                .app-bar entry {
-                    padding: 0 8px;
+                    min-width: 38px;
+                    min-height: 22px;
                 }
 
                 /* ============================================================
@@ -117,27 +135,64 @@ namespace Danbooru {
                    ============================================================ */
                 entry,
                 searchentry,
-                spinbutton,
-                dropdown {
+                spinbutton {
                     background: #232833;
                     color: #e6e8ee;
                     border: 1px solid #333a48;
-                    border-radius: 5px;
-                    font-size: 0.82em;
-                    min-height: 28px;
+                    border-radius: 6px;
+                    font-size: 0.84em;
+                    min-height: 32px;
                     box-shadow: none;
+                    outline: none;
                 }
+
+                /* DropDown shell has no chrome */
+                dropdown {
+                    background: transparent;
+                    color: #e6e8ee;
+                    border: none;
+                    border-radius: 0;
+                    box-shadow: none;
+                    outline: none;
+                    padding: 0;
+                    margin: 0;
+                    min-height: 0;
+                }
+                /* Only the toggle is a real control surface */
+                dropdown > button {
+                    background: #232833;
+                    color: #e6e8ee;
+                    border: 1px solid #333a48;
+                    border-radius: 6px;
+                    font-size: 0.84em;
+                    min-height: 32px;
+                    padding: 0 10px;
+                    box-shadow: none;
+                    outline: none;
+                }
+                dropdown > button:hover {
+                    background: #2c3240;
+                    border-color: #454e60;
+                }
+                dropdown > button:checked {
+                    background: #2c3240;
+                    border-color: #6ea8fe;
+                }
+
                 entry:focus,
                 searchentry:focus,
                 spinbutton:focus,
-                dropdown:focus,
                 entry:focus-within,
                 searchentry:focus-within,
-                spinbutton:focus-within,
-                dropdown:focus-within {
+                spinbutton:focus-within {
                     border-color: #6ea8fe;
                     outline: none;
-                    box-shadow: 0 0 0 2px alpha(#6ea8fe, 0.22);
+                    box-shadow: none;
+                }
+                dropdown > button:focus {
+                    border-color: #6ea8fe;
+                    outline: none;
+                    box-shadow: none;
                 }
                 entry selection,
                 searchentry selection {
@@ -152,11 +207,12 @@ namespace Danbooru {
                     background: #232833;
                     color: #e6e8ee;
                     border: 1px solid #333a48;
-                    border-radius: 5px;
-                    font-size: 0.82em;
-                    padding: 0 10px;
-                    min-height: 28px;
+                    border-radius: 6px;
+                    font-size: 0.84em;
+                    padding: 0 12px;
+                    min-height: 32px;
                     box-shadow: none;
+                    outline: none;
                 }
                 button:hover {
                     background: #2c3240;
@@ -167,6 +223,11 @@ namespace Danbooru {
                 }
                 button:disabled {
                     opacity: 0.4;
+                }
+                button:focus {
+                    border-color: #6ea8fe;
+                    outline: none;
+                    box-shadow: none;
                 }
                 button.suggested-action {
                     background: #6ea8fe;
@@ -181,6 +242,11 @@ namespace Danbooru {
                 button.suggested-action:active {
                     background: #5a96eb;
                 }
+                button.suggested-action:focus {
+                    border-color: #8bbcff;
+                    outline: none;
+                    box-shadow: none;
+                }
                 button.suggested-action:disabled {
                     background: #2a3140;
                     border-color: #333a48;
@@ -194,9 +260,11 @@ namespace Danbooru {
                 switch {
                     background: #232833;
                     border: 1px solid #333a48;
-                    border-radius: 12px;
-                    min-width: 36px;
-                    min-height: 20px;
+                    border-radius: 11px;
+                    min-width: 38px;
+                    min-height: 22px;
+                    box-shadow: none;
+                    outline: none;
                 }
                 switch:checked {
                     background: #6ea8fe;
@@ -209,12 +277,18 @@ namespace Danbooru {
                     background: #8bbcff;
                     border-color: #6ea8fe;
                 }
+                switch:focus {
+                    border-color: #6ea8fe;
+                    outline: none;
+                    box-shadow: none;
+                }
                 switch slider {
                     background: #e6e8ee;
                     border-radius: 10px;
                     min-width: 16px;
                     min-height: 16px;
                     box-shadow: none;
+                    margin: 2px;
                 }
 
                 /* ============================================================

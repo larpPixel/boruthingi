@@ -1,13 +1,16 @@
 namespace Danbooru {
     /**
-     * Shared chrome bar used for the search toolbar, selection bar,
-     * and detail header so every surface in the app shares one look.
+     * Shared chrome bar for search, selection, and detail headers.
      *
-     * Layout: [ start … expands … ] [ center ] [ end ]
+     * Layout:  [ start ……………… expands ……………… ]  gap  [ end ]
+     *
+     * The gap is intentional: the expanding region is the *start group*,
+     * so a trailing start control (e.g. search button) does not sit flush
+     * against the first end control (e.g. Medium dropdown).
      */
     public class AppBar : Gtk.Box {
         private Gtk.Box start_box;
-        private Gtk.Box center_box;
+        private Gtk.Box? center_box = null;
         private Gtk.Box end_box;
 
         public bool is_bottom { get; construct; default = false; }
@@ -35,19 +38,17 @@ namespace Danbooru {
             start_box.hexpand = true;
             start_box.halign = Gtk.Align.FILL;
 
-            center_box = make_slot();
-            center_box.halign = Gtk.Align.CENTER;
-
             end_box = make_slot();
             end_box.halign = Gtk.Align.END;
+            // Separates primary actions (search) from secondary (filters / download).
+            end_box.margin_start = 20;
 
             append(start_box);
-            append(center_box);
             append(end_box);
         }
 
         private static Gtk.Box make_slot() {
-            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
             box.valign = Gtk.Align.CENTER;
             return box;
         }
@@ -57,6 +58,12 @@ namespace Danbooru {
         }
 
         public void pack_center(Gtk.Widget child) {
+            if (center_box == null) {
+                center_box = make_slot();
+                center_box.halign = Gtk.Align.CENTER;
+                // Insert between start and end.
+                insert_child_after(center_box, start_box);
+            }
             center_box.append(child);
         }
 

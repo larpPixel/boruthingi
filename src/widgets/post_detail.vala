@@ -33,7 +33,10 @@ namespace Danbooru {
             var detail_header = new AppBar(false);
 
             var back_btn = new Gtk.Button.from_icon_name("go-previous-symbolic");
+            back_btn.add_css_class("bar-control");
+            back_btn.add_css_class("bar-icon");
             back_btn.tooltip_text = "Back to grid";
+            back_btn.valign = Gtk.Align.CENTER;
             back_btn.clicked.connect(() => back());
 
             id_label = new Gtk.Label("");
@@ -43,13 +46,17 @@ namespace Danbooru {
             id_label.hexpand = true;
             id_label.ellipsize = Pango.EllipsizeMode.END;
 
-            open_button = new Gtk.Button.with_label("Open in Browser");
-            open_button.tooltip_text = "Open post page in web browser";
+            open_button = new Gtk.Button.with_label("Open");
+            open_button.add_css_class("bar-control");
+            open_button.tooltip_text = "Open post page in browser";
+            open_button.valign = Gtk.Align.CENTER;
             open_button.clicked.connect(on_open_browser);
 
-            download_button = new Gtk.Button.with_label("Download Best Available");
+            download_button = new Gtk.Button.with_label("Download");
+            download_button.add_css_class("bar-control");
             download_button.add_css_class("suggested-action");
-            download_button.tooltip_text = "Download the highest quality available";
+            download_button.tooltip_text = "Download best available quality";
+            download_button.valign = Gtk.Align.CENTER;
             download_button.clicked.connect(on_download_original);
 
             detail_header.pack_start(back_btn);

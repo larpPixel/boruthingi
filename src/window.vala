@@ -9,9 +9,10 @@ namespace Danbooru {
         private uint debounce_timer_id = 0;
         private int autocomplete_gen = 0;
         private Gtk.Switch show_explicit_switch;
-        private Gtk.SpinButton limit_spin;
+        private Gtk.DropDown limit_dropdown;
         private Gtk.DropDown size_dropdown;
         private Gtk.DropDown sort_dropdown;
+        private static int[] LIMIT_VALUES = { 10, 20, 30, 40, 50, 60, 80, 100 };
 
         // Navigation
         private Gtk.Stack main_stack;
@@ -67,55 +68,69 @@ namespace Danbooru {
         private void build_ui() {
             var root = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 
-            // ── Top bar: controls pack straight into AppBar (no cluster boxes) ──
+            // ── Top bar ──
+            // One control type for options (dropdowns) so heights match.
+            // Labels live in tooltips — the selected value is the label.
             search_toolbar = new AppBar(false);
 
             search_entry = new Gtk.SearchEntry();
             search_entry.hexpand = true;
-            search_entry.placeholder_text = "Search tags, for example: cat rating:s";
+            search_entry.placeholder_text = "Search tags…";
+            search_entry.add_css_class("bar-control");
+            search_entry.valign = Gtk.Align.CENTER;
             search_entry.activate.connect(on_search_clicked);
 
-            var search_btn = new Gtk.Button.from_icon_name("edit-find-symbolic");
+            var search_btn = make_icon_btn("edit-find-symbolic", "Search");
             search_btn.add_css_class("suggested-action");
-            search_btn.tooltip_text = "Search";
             search_btn.clicked.connect(on_search_clicked);
 
             search_toolbar.pack_start(search_entry);
             search_toolbar.pack_start(search_btn);
 
-            var size_model = new Gtk.StringList(new string[] { "Small", "Medium", "Large" });
-            size_dropdown = new Gtk.DropDown(size_model, null);
-            size_dropdown.selected = 1;
-            size_dropdown.tooltip_text = "Thumbnail preview size";
-            size_dropdown.valign = Gtk.Align.CENTER;
+            size_dropdown = make_dropdown(
+                new string[] { "Small", "Medium", "Large" },
+                1,
+                "Thumbnail size"
+            );
 
-            limit_spin = new Gtk.SpinButton.with_range(10, 100, 10);
-            limit_spin.value = Config.DEFAULT_LIMIT;
-            limit_spin.valign = Gtk.Align.CENTER;
-            limit_spin.tooltip_text = "Results per page";
+            int default_limit_idx = 3; // 40
+            for (int i = 0; i < LIMIT_VALUES.length; i++) {
+                if (LIMIT_VALUES[i] == Config.DEFAULT_LIMIT) {
+                    default_limit_idx = i;
+                    break;
+                }
+            }
+            string[] limit_labels = new string[LIMIT_VALUES.length];
+            for (int i = 0; i < LIMIT_VALUES.length; i++) {
+                limit_labels[i] = LIMIT_VALUES[i].to_string();
+            }
+            limit_dropdown = make_dropdown(limit_labels, default_limit_idx, "Results per page");
 
-            var sort_model = new Gtk.StringList(new string[] {
-                "Default", "Score", "Favorites", "Rank", "Newest", "Random"
-            });
-            sort_dropdown = new Gtk.DropDown(sort_model, null);
-            sort_dropdown.selected = 0;
-            sort_dropdown.tooltip_text = "Sort results by";
-            sort_dropdown.valign = Gtk.Align.CENTER;
+            sort_dropdown = make_dropdown(
+                new string[] { "Default", "Score", "Favorites", "Rank", "Newest", "Random" },
+                0,
+                "Sort order"
+            );
 
             show_explicit_switch = new Gtk.Switch();
             show_explicit_switch.valign = Gtk.Align.CENTER;
-            show_explicit_switch.tooltip_text = "Include explicit-rated posts in searches without a rating tag";
+            show_explicit_switch.tooltip_text = "Include explicit posts when no rating tag is set";
 
-            // End slot is LTR: first packed is leftmost of the group.
-            search_toolbar.pack_end(make_bar_label("Size"));
+            var explicit_label = new Gtk.Label("Explicit");
+            explicit_label.add_css_class("bar-label");
+            explicit_label.valign = Gtk.Align.CENTER;
+
+            // Tight label+switch pair (only nested group in the bar).
+            var explicit_pair = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+            explicit_pair.valign = Gtk.Align.CENTER;
+            explicit_pair.append(explicit_label);
+            explicit_pair.append(show_explicit_switch);
+
             search_toolbar.pack_end(size_dropdown);
-            search_toolbar.pack_end(make_bar_label("Limit"));
-            search_toolbar.pack_end(limit_spin);
-            search_toolbar.pack_end(make_bar_label("Sort"));
+            search_toolbar.pack_end(limit_dropdown);
             search_toolbar.pack_end(sort_dropdown);
             search_toolbar.pack_end(AppBar.make_separator());
-            search_toolbar.pack_end(make_bar_label("Explicit"));
-            search_toolbar.pack_end(show_explicit_switch);
+            search_toolbar.pack_end(explicit_pair);
 
             root.append(search_toolbar);
 
@@ -195,24 +210,21 @@ namespace Danbooru {
 
             selection_label = new Gtk.Label("0 selected");
             selection_label.add_css_class("bar-status");
+            selection_label.valign = Gtk.Align.CENTER;
 
-            select_all_btn = new Gtk.Button.with_label("Select All");
-            select_all_btn.tooltip_text = "Select every result for the current search";
+            select_all_btn = make_text_btn("Select All", "Select every result for the current search");
             select_all_btn.visible = false;
             select_all_btn.clicked.connect(on_select_all);
 
-            var clear_btn = new Gtk.Button.from_icon_name("edit-clear-symbolic");
-            clear_btn.tooltip_text = "Clear selection";
+            var clear_btn = make_icon_btn("edit-clear-symbolic", "Clear selection");
             clear_btn.clicked.connect(on_clear_selection);
 
-            download_btn = new Gtk.Button.with_label("Download");
+            download_btn = make_text_btn("Download", "Download best quality for selected posts");
             download_btn.add_css_class("suggested-action");
-            download_btn.tooltip_text = "Download the highest quality available for selected posts";
             download_btn.sensitive = false;
             download_btn.clicked.connect(on_download_selected);
 
-            var refresh_btn = new Gtk.Button.from_icon_name("view-refresh-symbolic");
-            refresh_btn.tooltip_text = "Refresh";
+            var refresh_btn = make_icon_btn("view-refresh-symbolic", "Refresh results");
             refresh_btn.clicked.connect(on_refresh);
 
             bottom_bar.pack_start(selection_label);
@@ -225,11 +237,39 @@ namespace Danbooru {
             this.content = root;
         }
 
-        private static Gtk.Label make_bar_label(string text) {
-            var label = new Gtk.Label(text);
-            label.add_css_class("bar-label");
-            label.valign = Gtk.Align.CENTER;
-            return label;
+        private static Gtk.Button make_icon_btn(string icon, string tooltip) {
+            var btn = new Gtk.Button.from_icon_name(icon);
+            btn.add_css_class("bar-control");
+            btn.add_css_class("bar-icon");
+            btn.tooltip_text = tooltip;
+            btn.valign = Gtk.Align.CENTER;
+            return btn;
+        }
+
+        private static Gtk.Button make_text_btn(string label, string tooltip) {
+            var btn = new Gtk.Button.with_label(label);
+            btn.add_css_class("bar-control");
+            btn.tooltip_text = tooltip;
+            btn.valign = Gtk.Align.CENTER;
+            return btn;
+        }
+
+        private static Gtk.DropDown make_dropdown(string[] items, int selected, string tooltip) {
+            var model = new Gtk.StringList(items);
+            var dropdown = new Gtk.DropDown(model, null);
+            dropdown.selected = selected;
+            dropdown.tooltip_text = tooltip;
+            dropdown.valign = Gtk.Align.CENTER;
+            dropdown.add_css_class("bar-control");
+            return dropdown;
+        }
+
+        private int current_limit() {
+            uint idx = limit_dropdown.selected;
+            if (idx >= LIMIT_VALUES.length) {
+                return Config.DEFAULT_LIMIT;
+            }
+            return LIMIT_VALUES[idx];
         }
 
         // ───────────── Navigation ─────────────
@@ -289,10 +329,6 @@ namespace Danbooru {
                 });
             });
 
-            show_explicit_switch.notify["active"].connect(() => {
-                start_fresh_search();
-            });
-
             size_dropdown.notify["selected"].connect(() => {
                 var new_size = (PreviewSize)size_dropdown.selected;
                 if (new_size != preview_size) {
@@ -302,6 +338,10 @@ namespace Danbooru {
             });
 
             sort_dropdown.notify["selected"].connect(() => {
+                start_fresh_search();
+            });
+
+            show_explicit_switch.notify["active"].connect(() => {
                 start_fresh_search();
             });
         }
@@ -382,7 +422,7 @@ namespace Danbooru {
         private async void search_posts(string tags, int page) {
             int captured_gen = search_gen;
             try {
-                var limit = (int)limit_spin.value;
+                var limit = current_limit();
                 var posts = yield api.search_posts(tags, page, limit);
 
                 Idle.add(() => {
