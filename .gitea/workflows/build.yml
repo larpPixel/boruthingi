@@ -16,10 +16,10 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
-      - name: Install Git and Tar (required for checkout)
+      - name: Install Git, Tar and Node.js (required for checkout)
         run: |
           apt-get update
-          apt-get install -y git tar
+          apt-get install -y git tar nodejs
 
       - name: Checkout code
         uses: actions/checkout@v4
