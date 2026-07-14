@@ -15,8 +15,8 @@ namespace Danbooru {
 
         // Navigation
         private Gtk.Stack main_stack;
-        private Gtk.Box search_toolbar;
-        private Gtk.ActionBar bottom_bar;
+        private AppBar search_toolbar;
+        private AppBar bottom_bar;
         private Gtk.Box grid_page;
         private PostDetailView detail_view;
 
@@ -67,12 +67,8 @@ namespace Danbooru {
         private void build_ui() {
             var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 
-            // Top toolbar (replaces headerbar for tiling window managers)
-            var search_clamp = new Adw.Clamp();
-            search_clamp.maximum_size = 1240;
-            search_clamp.tightening_threshold = 800;
-            search_toolbar = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
-            search_toolbar.add_css_class("app-toolbar");
+            // Top bar — same AppBar chrome as bottom + detail
+            search_toolbar = new AppBar(false);
 
             search_entry = new Gtk.SearchEntry();
             search_entry.hexpand = true;
@@ -83,25 +79,26 @@ namespace Danbooru {
             search_btn.tooltip_text = "Search";
             search_btn.clicked.connect(on_search_clicked);
 
-            var limit_label = new Gtk.Label("Results");
-            limit_label.add_css_class("dim-label");
+            var search_cluster = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+            search_cluster.hexpand = true;
+            search_cluster.valign = Gtk.Align.CENTER;
+            search_cluster.append(search_entry);
+            search_cluster.append(search_btn);
 
-            limit_spin = new Gtk.SpinButton.with_range(10, 100, 10);
-            limit_spin.value = Config.DEFAULT_LIMIT;
-            limit_spin.valign = Gtk.Align.CENTER;
-
-            // Preview size dropdown
-            var size_label = new Gtk.Label("Size");
-            size_label.add_css_class("dim-label");
+            var size_label = make_bar_label("Size");
             var size_model = new Gtk.StringList(new string[] { "Small", "Medium", "Large" });
             size_dropdown = new Gtk.DropDown(size_model, null);
             size_dropdown.selected = 1;
             size_dropdown.tooltip_text = "Thumbnail preview size";
             size_dropdown.valign = Gtk.Align.CENTER;
 
-            // Sort dropdown
-            var sort_label = new Gtk.Label("Sort");
-            sort_label.add_css_class("dim-label");
+            var limit_label = make_bar_label("Limit");
+            limit_spin = new Gtk.SpinButton.with_range(10, 100, 10);
+            limit_spin.value = Config.DEFAULT_LIMIT;
+            limit_spin.valign = Gtk.Align.CENTER;
+            limit_spin.tooltip_text = "Results per page";
+
+            var sort_label = make_bar_label("Sort");
             var sort_model = new Gtk.StringList(new string[] {
                 "Default",
                 "Score",
@@ -115,26 +112,26 @@ namespace Danbooru {
             sort_dropdown.tooltip_text = "Sort results by";
             sort_dropdown.valign = Gtk.Align.CENTER;
 
-            // Explicit content toggle
-            var explicit_control = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
-            var explicit_label = new Gtk.Label("Explicit");
+            var explicit_label = make_bar_label("Explicit");
             show_explicit_switch = new Gtk.Switch();
             show_explicit_switch.valign = Gtk.Align.CENTER;
             show_explicit_switch.tooltip_text = "Include explicit-rated posts in searches without a rating tag";
-            explicit_control.append(explicit_label);
-            explicit_control.append(show_explicit_switch);
 
-            search_toolbar.append(search_entry);
-            search_toolbar.append(search_btn);
-            search_toolbar.append(limit_label);
-            search_toolbar.append(limit_spin);
-            search_toolbar.append(size_label);
-            search_toolbar.append(size_dropdown);
-            search_toolbar.append(sort_label);
-            search_toolbar.append(sort_dropdown);
-            search_toolbar.append(explicit_control);
-            search_clamp.child = search_toolbar;
-            vbox.append(search_clamp);
+            var options_cluster = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+            options_cluster.valign = Gtk.Align.CENTER;
+            options_cluster.append(size_label);
+            options_cluster.append(size_dropdown);
+            options_cluster.append(limit_label);
+            options_cluster.append(limit_spin);
+            options_cluster.append(sort_label);
+            options_cluster.append(sort_dropdown);
+            options_cluster.append(AppBar.make_separator());
+            options_cluster.append(explicit_label);
+            options_cluster.append(show_explicit_switch);
+
+            search_toolbar.pack_start(search_cluster);
+            search_toolbar.pack_end(options_cluster);
+            vbox.append(search_toolbar);
 
             // Main content stack
             main_stack = new Gtk.Stack();
@@ -203,15 +200,19 @@ namespace Danbooru {
 
             vbox.append(main_stack);
 
-            bottom_bar = new Gtk.ActionBar();
+            bottom_bar = new AppBar(true);
 
             selection_label = new Gtk.Label("0 selected");
-            selection_label.add_css_class("meta-label");
+            selection_label.add_css_class("bar-status");
 
             select_all_btn = new Gtk.Button.with_label("Select All");
             select_all_btn.tooltip_text = "Select every result for the current search";
             select_all_btn.visible = false;
             select_all_btn.clicked.connect(on_select_all);
+
+            var clear_btn = new Gtk.Button.from_icon_name("edit-clear-symbolic");
+            clear_btn.tooltip_text = "Clear selection";
+            clear_btn.clicked.connect(on_clear_selection);
 
             download_btn = new Gtk.Button.with_label("Download");
             download_btn.add_css_class("suggested-action");
@@ -225,14 +226,22 @@ namespace Danbooru {
 
             bottom_bar.pack_start(selection_label);
             bottom_bar.pack_start(select_all_btn);
-            bottom_bar.pack_start(download_btn);
+            bottom_bar.pack_start(clear_btn);
             bottom_bar.pack_end(refresh_btn);
+            bottom_bar.pack_end(download_btn);
 
             vbox.append(bottom_bar);
             this.content = vbox;
 
             // Enter key triggers search
             search_entry.activate.connect(on_search_clicked);
+        }
+
+        private static Gtk.Label make_bar_label(string text) {
+            var label = new Gtk.Label(text);
+            label.add_css_class("bar-label");
+            label.valign = Gtk.Align.CENTER;
+            return label;
         }
 
         // ───────────── Navigation ─────────────
@@ -570,6 +579,24 @@ namespace Danbooru {
             select_all_mode = false;
             select_all_btn.label = "Select All";
             select_all_btn.tooltip_text = "Select every result for the current search";
+        }
+
+        private void on_clear_selection() {
+            stop_select_all_mode();
+            int index = 0;
+            while (true) {
+                var child = flowbox.get_child_at_index(index++);
+                if (child == null) break;
+
+                var thumbnail = child.get_child() as ThumbnailWidget;
+                if (thumbnail != null) thumbnail.set_selected(false);
+            }
+            {
+                while (selected_posts.length() > 0) {
+                    selected_posts.remove(selected_posts.nth_data(0));
+                }
+            }
+            update_selection_ui();
         }
 
         // ───────────── Detail ─────────────

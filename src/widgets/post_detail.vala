@@ -24,26 +24,19 @@ namespace Danbooru {
         }
 
         construct {
-            // Detail header — styled like the main app toolbar
-            var detail_clamp = new Adw.Clamp();
-            detail_clamp.maximum_size = 1240;
-            detail_clamp.tightening_threshold = 800;
-            detail_clamp.margin_start = 12;
-            detail_clamp.margin_end = 12;
-            detail_clamp.margin_top = 8;
-            detail_clamp.margin_bottom = 0;
-
-            var detail_header = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
-            detail_header.add_css_class("app-toolbar");
+            // Same AppBar chrome as the grid search + selection bars
+            var detail_header = new AppBar(false);
 
             var back_btn = new Gtk.Button.from_icon_name("go-previous-symbolic");
             back_btn.tooltip_text = "Back to grid";
             back_btn.clicked.connect(() => back());
 
             id_label = new Gtk.Label("");
-            id_label.add_css_class("detail-id");
-            id_label.hexpand = true;
+            id_label.add_css_class("bar-title");
             id_label.halign = Gtk.Align.START;
+            id_label.valign = Gtk.Align.CENTER;
+            id_label.hexpand = true;
+            id_label.ellipsize = Pango.EllipsizeMode.END;
 
             open_button = new Gtk.Button.with_label("Open in Browser");
             open_button.tooltip_text = "Open post page in web browser";
@@ -54,13 +47,12 @@ namespace Danbooru {
             download_button.tooltip_text = "Download the highest quality available";
             download_button.clicked.connect(on_download_original);
 
-            detail_header.append(back_btn);
-            detail_header.append(id_label);
-            detail_header.append(open_button);
-            detail_header.append(download_button);
+            detail_header.pack_start(back_btn);
+            detail_header.pack_start(id_label);
+            detail_header.pack_end(open_button);
+            detail_header.pack_end(download_button);
 
-            detail_clamp.child = detail_header;
-            this.append(detail_clamp);
+            this.append(detail_header);
 
             // Scrollable content
             var scrolled = new Gtk.ScrolledWindow();
@@ -115,7 +107,7 @@ namespace Danbooru {
             tags_container.margin_top = 8;
 
             var tags_header = new Gtk.Label("Tags");
-            tags_header.add_css_class("detail-id");
+            tags_header.add_css_class("section-title");
             tags_header.halign = Gtk.Align.START;
             tags_container.append(tags_header);
 
@@ -163,7 +155,7 @@ namespace Danbooru {
 
             // Re-add header after clear
             var tags_header = new Gtk.Label("Tags");
-            tags_header.add_css_class("detail-id");
+            tags_header.add_css_class("section-title");
             tags_header.halign = Gtk.Align.START;
             tags_container.append(tags_header);
 

@@ -21,6 +21,7 @@ sources = files(
     'src/config.vala',
     'src/models/post.vala',
     'src/api/danbooru.vala',
+    'src/widgets/app_bar.vala',
     'src/widgets/thumbnail.vala',
     'src/widgets/post_detail.vala',
     'src/widgets/download_dialog.vala',
