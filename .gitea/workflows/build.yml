@@ -23,11 +23,7 @@ jobs:
 
       - name: Checkout code
         run: |
-          git init
-          git remote add origin "https://git.jr4.in/${GITHUB_REPOSITORY}.git"
-          git config --local "http.https://git.jr4.in/.extraheader" "Authorization: Bearer ${{ github.token }}"
-          git fetch --depth=1 origin main
-          git checkout "${GITHUB_SHA}"
+          git clone --depth=1 "http://192.168.1.2:4000/${GITHUB_REPOSITORY}.git" .
 
       - name: Install dependencies
         run: |
