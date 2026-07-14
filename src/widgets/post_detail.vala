@@ -28,6 +28,10 @@ namespace Danbooru {
             var detail_clamp = new Adw.Clamp();
             detail_clamp.maximum_size = 1240;
             detail_clamp.tightening_threshold = 800;
+            detail_clamp.margin_start = 12;
+            detail_clamp.margin_end = 12;
+            detail_clamp.margin_top = 8;
+            detail_clamp.margin_bottom = 0;
 
             var detail_header = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
             detail_header.add_css_class("app-toolbar");
@@ -63,7 +67,7 @@ namespace Danbooru {
             scrolled.vexpand = true;
             scrolled.hscrollbar_policy = Gtk.PolicyType.NEVER;
 
-            var content = new Gtk.Box(Gtk.Orientation.VERTICAL, 12);
+            var content = new Gtk.Box(Gtk.Orientation.VERTICAL, 10);
             content.margin_start = 12;
             content.margin_end = 12;
             content.margin_top = 12;

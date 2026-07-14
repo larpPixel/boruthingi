@@ -16,6 +16,11 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
+      - name: Install Git and Tar (required for checkout)
+        run: |
+          apt-get update
+          apt-get install -y git tar
+
       - name: Checkout code
         uses: actions/checkout@v4
 
