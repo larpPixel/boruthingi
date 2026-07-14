@@ -44,6 +44,7 @@ jobs:
         run: meson compile -C build
 
       - name: Upload to Gitea Release
+        shell: bash
         if: github.event_name != 'pull_request'
         env:
           GITEA_TOKEN: ${{ github.token }}
