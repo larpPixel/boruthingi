@@ -8,41 +8,43 @@ namespace Danbooru {
 
         private Gtk.Image image_widget;
         private Gtk.Label score_label;
-        private Gtk.Label rating_label;
+        private Gtk.Label dims_label;
         private Gtk.CheckButton check_button;
         private Gtk.Overlay overlay;
         private Gtk.Box container;
+        private int preview_w;
+        private int preview_h;
 
-        public ThumbnailWidget(Post post) {
-            Object(post: post, orientation: Gtk.Orientation.VERTICAL, spacing: 1);
+        public ThumbnailWidget(Post post, PreviewSize size = PreviewSize.MEDIUM) {
+            Object(post: post, orientation: Gtk.Orientation.VERTICAL, spacing: 0);
+            set_preview_size(size);
         }
 
         construct {
-            this.width_request = Config.THUMBNAIL_WIDTH;
             this.hexpand = false;
+            this.vexpand = false;
 
             add_css_class("thumbnail-card");
 
-            // Image overlay container
             overlay = new Gtk.Overlay();
+            overlay.width_request = preview_w;
+            overlay.height_request = preview_h;
 
             image_widget = new Gtk.Image();
-            image_widget.pixel_size = Config.PREVIEW_WIDTH;
-            image_widget.set_size_request(Config.PREVIEW_WIDTH, Config.PREVIEW_HEIGHT);
+            image_widget.pixel_size = preview_w;
+            image_widget.set_size_request(preview_w, preview_h);
             image_widget.add_css_class("thumbnail-image");
-
-            // Placeholder
             image_widget.set_from_icon_name("image-x-generic-symbolic");
 
             overlay.child = image_widget;
 
-            // Check button for selection (top-left)
+            // Selection checkbox (top-left)
             check_button = new Gtk.CheckButton();
             check_button.halign = Gtk.Align.START;
             check_button.valign = Gtk.Align.START;
             check_button.margin_start = 4;
             check_button.margin_top = 4;
-            check_button.add_css_class("selection-check");
+            check_button.add_css_class("selection-overlay");
             check_button.toggled.connect(() => {
                 is_selected = check_button.active;
                 selection_toggled(post, is_selected);
@@ -52,38 +54,39 @@ namespace Danbooru {
                     container.remove_css_class("selected");
                 }
             });
-
             overlay.add_overlay(check_button);
 
             // Rating badge (top-right)
-            rating_label = new Gtk.Label(post.display_rating);
+            var rating_label = new Gtk.Label(post.display_rating);
             rating_label.halign = Gtk.Align.END;
             rating_label.valign = Gtk.Align.START;
             rating_label.margin_end = 4;
             rating_label.margin_top = 4;
-            rating_label.add_css_class(post.rating_color_css);
+            rating_label.add_css_class("badge");
+            rating_label.add_css_class(post.rating_css_key);
             overlay.add_overlay(rating_label);
+
+            // Score pill (bottom-left)
+            score_label = new Gtk.Label(@"★$(post.score)");
+            score_label.halign = Gtk.Align.START;
+            score_label.valign = Gtk.Align.END;
+            score_label.margin_start = 4;
+            score_label.margin_bottom = 4;
+            score_label.add_css_class("info-pill");
+            overlay.add_overlay(score_label);
+
+            // Dimensions pill (bottom-right)
+            dims_label = new Gtk.Label(@"$(post.image_width)×$(post.image_height)");
+            dims_label.halign = Gtk.Align.END;
+            dims_label.valign = Gtk.Align.END;
+            dims_label.margin_end = 4;
+            dims_label.margin_bottom = 4;
+            dims_label.add_css_class("info-pill");
+            overlay.add_overlay(dims_label);
 
             this.append(overlay);
 
-            // Info bar
-            var info_box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 2);
-            info_box.homogeneous = false;
-
-            score_label = new Gtk.Label(@"★ $(post.score)");
-            score_label.halign = Gtk.Align.START;
-            score_label.add_css_class("score-label");
-
-            var dims_label = new Gtk.Label(@"$(post.image_width)×$(post.image_height)");
-            dims_label.halign = Gtk.Align.END;
-            dims_label.hexpand = true;
-            dims_label.add_css_class("dims-label");
-
-            info_box.append(score_label);
-            info_box.append(dims_label);
-            this.append(info_box);
-
-            // Click gesture
+            // Click gesture on image
             var gesture = new Gtk.GestureClick();
             gesture.pressed.connect((n_press, x, y) => {
                 clicked(post);
@@ -91,6 +94,26 @@ namespace Danbooru {
             image_widget.add_controller(gesture);
 
             container = this;
+        }
+
+        public void set_preview_size(PreviewSize size) {
+            preview_w = Config.preview_width_for_size(size);
+            preview_h = Config.preview_height_for_size(size);
+            this.width_request = Config.thumbnail_width_for_size(size);
+            if (overlay != null) {
+                overlay.width_request = preview_w;
+                overlay.height_request = preview_h;
+            }
+            if (image_widget != null) {
+                image_widget.pixel_size = preview_w;
+                image_widget.set_size_request(preview_w, preview_h);
+            }
+        }
+
+        public void set_selected(bool selected) {
+            if (check_button.active != selected) {
+                check_button.active = selected;
+            }
         }
 
         public async void load_thumbnail(Api api) {
@@ -119,7 +142,7 @@ namespace Danbooru {
                 var texture = Gdk.Texture.from_bytes(bytes);
                 image_widget.set_from_paintable(texture);
 
-                // Cache asynchronously (fire and forget)
+                // Cache async (fire and forget)
                 download_thumbnail_to_cache.begin(api, url);
 
             } catch (Error e) {

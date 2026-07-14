@@ -22,6 +22,8 @@ namespace Danbooru {
         public string? file_url { get; set; default = null; }
         public string? large_file_url { get; set; default = null; }
         public string? preview_file_url { get; set; default = null; }
+        public string? best_available_url { get; set; default = null; }
+        public string best_available_ext { get; set; default = ""; }
 
         public string display_rating {
             owned get {
@@ -44,9 +46,13 @@ namespace Danbooru {
 
         public string original_url {
             owned get {
-                if (file_url != null && file_url != "") return file_url;
-                if (md5 == "") return "";
-                return @"$(Config.CDN_URL)/original/$(md5.substring(0,2))/$(md5.substring(2,2))/$(md5).$(file_ext)";
+                return best_available_url ?? file_url ?? large_file_url ?? preview_file_url ?? "";
+            }
+        }
+
+        public string download_file_ext {
+            owned get {
+                return best_available_ext != "" ? best_available_ext : file_ext;
             }
         }
 
@@ -72,13 +78,13 @@ namespace Danbooru {
             }
         }
 
-        public string rating_color_css {
+        public string rating_css_key {
             owned get {
                 switch (rating) {
-                    case "s": return "badge safe";
-                    case "q": return "badge questionable";
-                    case "e": return "badge explicit";
-                    default: return "badge";
+                    case "s": return "s";
+                    case "q": return "q";
+                    case "e": return "e";
+                    default: return rating;
                 }
             }
         }
@@ -106,7 +112,60 @@ namespace Danbooru {
             post.file_url = get_string_nullable(obj, "file_url");
             post.large_file_url = get_string_nullable(obj, "large_file_url");
             post.preview_file_url = get_string_nullable(obj, "preview_file_url");
+            populate_best_available_asset(obj, post);
             return post;
+        }
+
+        private static void populate_best_available_asset(Json.Object obj, Post post) {
+            // Danbooru's file_url is the full-resolution file when it is present.
+            if (post.file_url != null && post.file_url != "") {
+                post.best_available_url = post.file_url;
+                post.best_available_ext = post.file_ext;
+                return;
+            }
+
+            string? fallback_url = post.file_url;
+            string fallback_ext = post.file_ext;
+            int64 largest_area = -1;
+
+            if (!obj.has_member("media_asset") || obj.get_null_member("media_asset")) {
+                post.best_available_url = fallback_url;
+                post.best_available_ext = fallback_ext;
+                return;
+            }
+
+            var asset = obj.get_object_member("media_asset");
+            if (!asset.has_member("variants") || asset.get_null_member("variants")) {
+                post.best_available_url = fallback_url;
+                post.best_available_ext = fallback_ext;
+                return;
+            }
+
+            foreach (var element in asset.get_array_member("variants").get_elements()) {
+                var variant = element.get_object();
+                var url = get_string(variant, "url");
+                if (url == "") continue;
+
+                var type = get_string(variant, "type");
+                var ext = get_string(variant, "file_ext");
+                if (type == "original") {
+                    post.best_available_url = url;
+                    post.best_available_ext = ext != "" ? ext : post.file_ext;
+                    return;
+                }
+
+                int64 width = variant.has_member("width") ? variant.get_int_member("width") : 0;
+                int64 height = variant.has_member("height") ? variant.get_int_member("height") : 0;
+                int64 area = width * height;
+                if (area > largest_area) {
+                    largest_area = area;
+                    fallback_url = url;
+                    fallback_ext = ext != "" ? ext : post.file_ext;
+                }
+            }
+
+            post.best_available_url = fallback_url;
+            post.best_available_ext = fallback_ext;
         }
 
         private static string get_string(Json.Object obj, string name) {

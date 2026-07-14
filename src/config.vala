@@ -1,4 +1,10 @@
 namespace Danbooru {
+    public enum PreviewSize {
+        SMALL,
+        MEDIUM,
+        LARGE
+    }
+
     public class Config {
         public const string APP_ID = "com.github.danboruthingi";
         public const string APP_NAME = "Danboruthingi";
@@ -11,6 +17,37 @@ namespace Danbooru {
         public const int PREVIEW_WIDTH = 180;
         public const int PREVIEW_HEIGHT = 180;
         public const string USER_AGENT = "Danboruthingi/0.1.0";
+
+        public static int preview_width_for_size(PreviewSize size) {
+            switch (size) {
+                case PreviewSize.SMALL: return 120;
+                case PreviewSize.LARGE: return 260;
+                case PreviewSize.MEDIUM:
+                default: return 180;
+            }
+        }
+
+        public static int preview_height_for_size(PreviewSize size) {
+            switch (size) {
+                case PreviewSize.SMALL: return 120;
+                case PreviewSize.LARGE: return 260;
+                case PreviewSize.MEDIUM:
+                default: return 180;
+            }
+        }
+
+        public static int thumbnail_width_for_size(PreviewSize size) {
+            return preview_width_for_size(size) + 20;
+        }
+
+        public static int flowbox_max_children_for_size(PreviewSize size) {
+            switch (size) {
+                case PreviewSize.SMALL: return 10;
+                case PreviewSize.LARGE: return 4;
+                case PreviewSize.MEDIUM:
+                default: return 6;
+            }
+        }
 
         public static string get_cache_dir() {
             string? xdg = Environment.get_variable("XDG_CACHE_HOME");

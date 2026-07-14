@@ -1,7 +1,9 @@
 project('danboruthingi', 'vala', 'c',
-    version: '0.1.0',
+    version: '0.2.0',
     meson_version: '>= 0.50.0',
 )
+
+add_project_arguments('--vapidir=' + meson.current_source_dir() / 'vapi', language: 'vala')
 
 dependencies = [
     dependency('glib-2.0'),
@@ -10,6 +12,7 @@ dependencies = [
     dependency('libsoup-3.0'),
     dependency('json-glib-1.0'),
     dependency('gdk-pixbuf-2.0'),
+    dependency('libadwaita-1'),
 ]
 
 sources = files(

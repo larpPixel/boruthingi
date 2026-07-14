@@ -38,18 +38,21 @@ namespace Danbooru {
             return parse_tag_suggestions(bytes);
         }
 
-        public async uint8[] download_bytes(string url) throws Error {
+        public async uint8[] download_bytes(string url, Cancellable? cancellable = null) throws Error {
             var msg = new Soup.Message("GET", url);
-            var bytes = yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+            var bytes = yield session.send_and_read_async(msg, Priority.DEFAULT, cancellable);
+            ensure_success(msg, url);
             return bytes.get_data();
         }
 
-        public async void download_to_file(string url, string dest_path) throws Error {
+        public async void download_to_file(string url, string dest_path,
+                                           Cancellable? cancellable = null) throws Error {
             var file = GLib.File.new_for_path(dest_path);
             var msg = new Soup.Message("GET", url);
-            var bytes = yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+            var bytes = yield session.send_and_read_async(msg, Priority.DEFAULT, cancellable);
+            ensure_success(msg, url);
             yield file.replace_contents_async(bytes.get_data(), null, false,
-                GLib.FileCreateFlags.REPLACE_DESTINATION, null, null);
+                GLib.FileCreateFlags.REPLACE_DESTINATION, cancellable, null);
         }
 
         public string get_thumbnail_cache_path(string md5, string ext) {
@@ -75,7 +78,15 @@ namespace Danbooru {
 
         private async Bytes get_url(string url) throws Error {
             var msg = new Soup.Message("GET", url);
-            return yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+            var bytes = yield session.send_and_read_async(msg, Priority.DEFAULT, null);
+            ensure_success(msg, url);
+            return bytes;
+        }
+
+        private void ensure_success(Soup.Message msg, string url) throws Error {
+            if (msg.status_code < 200 || msg.status_code >= 300) {
+                throw new IOError.FAILED("Request for %s failed (HTTP %u)".printf(url, msg.status_code));
+            }
         }
 
         private List<Post> parse_posts(Bytes bytes) throws Error {
