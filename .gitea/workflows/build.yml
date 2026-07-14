@@ -22,7 +22,12 @@ jobs:
           apt-get install -y git tar nodejs
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        run: |
+          git init
+          git remote add origin "https://git.jr4.in/${GITHUB_REPOSITORY}.git"
+          git config --local "http.https://git.jr4.in/.extraheader" "Authorization: Bearer ${{ github.token }}"
+          git fetch --depth=1 origin main
+          git checkout "${GITHUB_SHA}"
 
       - name: Install dependencies
         run: |
@@ -43,9 +48,4 @@ jobs:
       - name: Compile
         run: meson compile -C build
 
-      - name: Upload Binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: danboruthingi-linux
-          path: build/danboruthingi
 
