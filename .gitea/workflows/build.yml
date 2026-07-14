@@ -16,11 +16,10 @@ jobs:
     container:
       image: ubuntu:24.04
     steps:
-      - name: Install Git, Tar and Node.js (required for checkout)
+      - name: Install Git, Tar, Curl, Python3 (required for checkout and API calls)
         run: |
           apt-get update
-          apt-get install -y git tar nodejs
-
+          apt-get install -y git tar curl python3
       - name: Checkout code
         run: |
           git clone --depth=1 "http://192.168.1.2:4000/${GITHUB_REPOSITORY}.git" .
@@ -43,5 +42,49 @@ jobs:
 
       - name: Compile
         run: meson compile -C build
+
+      - name: Upload to Gitea Release
+        if: github.event_name != 'pull_request'
+        env:
+          GITEA_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          TAG_NAME="build-${SHORT_SHA}"
+          API_BASE="http://192.168.1.2:4000/api/v1/repos/${GITHUB_REPOSITORY}"
+
+          echo "Creating release ${TAG_NAME}..."
+
+          # Try to create the release
+          RELEASE_RESP=$(curl -s -X POST \
+            -H "Authorization: Bearer ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\":\"${TAG_NAME}\",\"name\":\"Build ${SHORT_SHA}\",\"body\":\"Automated build from commit ${GITHUB_SHA}\nBranch: ${GITHUB_REF_NAME}\",\"prerelease\":true,\"target_commitish\":\"${GITHUB_REF_NAME}\"}" \
+            "${API_BASE}/releases")
+
+          RELEASE_ID=$(echo "${RELEASE_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))")
+
+          # If tag already exists, fetch the existing release
+          if [ -z "${RELEASE_ID}" ]; then
+            echo "Release may already exist, fetching..."
+            RELEASE_RESP=$(curl -s \
+              -H "Authorization: Bearer ${GITEA_TOKEN}" \
+              "${API_BASE}/releases/tags/${TAG_NAME}")
+            RELEASE_ID=$(echo "${RELEASE_RESP}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))")
+          fi
+
+          if [ -z "${RELEASE_ID}" ]; then
+            echo "Failed to get release ID"
+            echo "${RELEASE_RESP}"
+            exit 1
+          fi
+
+          echo "Uploading artifact to release ${RELEASE_ID}..."
+          curl -s -X POST \
+            -H "Authorization: Bearer ${GITEA_TOKEN}" \
+            -F "attachment=@build/danboruthingi" \
+            "${API_BASE}/releases/${RELEASE_ID}/assets?name=danboruthingi-linux" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Uploaded: ' + d.get('name','unknown') + ' (' + str(d.get('size',0)) + ' bytes)')"
+          
+          echo "Release URL: https://git.jr4.in/${GITHUB_REPOSITORY}/releases/tag/${TAG_NAME}"
 
 
