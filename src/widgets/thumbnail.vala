@@ -1,22 +1,14 @@
 namespace Danbooru {
-    /**
-     * Thumbnail card. Gtk.Overlay is final so we keep a thin shell and put
-     * the image + badges in one overlay — no extra decorative wrappers.
-     */
+    /** Thumbnail card: image surface with badges overlaid. */
     public class ThumbnailWidget : Gtk.Box {
         public signal void clicked(Post post);
         public signal void selection_toggled(Post post, bool selected);
 
         public Post post { get; construct; }
-        public bool is_selected { get; set; default = false; }
 
         private Gtk.Image image_widget;
-        private Gtk.Label score_label;
-        private Gtk.Label dims_label;
         private Gtk.CheckButton check_button;
         private Gtk.Overlay overlay;
-        private int preview_w;
-        private int preview_h;
         private int load_gen = 0;
 
         public ThumbnailWidget(Post post, PreviewSize size = PreviewSize.MEDIUM) {
@@ -44,13 +36,12 @@ namespace Danbooru {
             check_button.margin_top = 4;
             check_button.add_css_class("selection-overlay");
             check_button.toggled.connect(() => {
-                is_selected = check_button.active;
-                if (is_selected) {
+                if (check_button.active) {
                     add_css_class("selected");
                 } else {
                     remove_css_class("selected");
                 }
-                selection_toggled(post, is_selected);
+                selection_toggled(post, check_button.active);
             });
             overlay.add_overlay(check_button);
 
@@ -63,7 +54,7 @@ namespace Danbooru {
             rating_label.add_css_class(post.rating_css_key);
             overlay.add_overlay(rating_label);
 
-            score_label = new Gtk.Label(@"★$(post.score)");
+            var score_label = new Gtk.Label(@"★$(post.score)");
             score_label.halign = Gtk.Align.START;
             score_label.valign = Gtk.Align.END;
             score_label.margin_start = 4;
@@ -71,7 +62,7 @@ namespace Danbooru {
             score_label.add_css_class("info-pill");
             overlay.add_overlay(score_label);
 
-            dims_label = new Gtk.Label(@"$(post.image_width)×$(post.image_height)");
+            var dims_label = new Gtk.Label(@"$(post.image_width)×$(post.image_height)");
             dims_label.halign = Gtk.Align.END;
             dims_label.valign = Gtk.Align.END;
             dims_label.margin_end = 4;
@@ -81,27 +72,24 @@ namespace Danbooru {
 
             append(overlay);
 
-            // Gesture on the image only — overlays (checkbox/badges) keep their own events.
+            // Image only — overlays keep their own events.
             var gesture = new Gtk.GestureClick();
             gesture.set_button(1);
-            gesture.released.connect((n_press, x, y) => {
-                clicked(post);
-            });
+            gesture.released.connect(() => clicked(post));
             image_widget.add_controller(gesture);
         }
 
         public void set_preview_size(PreviewSize size) {
-            preview_w = Config.preview_width_for_size(size);
-            preview_h = Config.preview_height_for_size(size);
-            width_request = preview_w;
-            height_request = preview_h;
+            int px = Config.preview_px(size);
+            width_request = px;
+            height_request = px;
             if (overlay != null) {
-                overlay.width_request = preview_w;
-                overlay.height_request = preview_h;
+                overlay.width_request = px;
+                overlay.height_request = px;
             }
             if (image_widget != null) {
-                image_widget.pixel_size = preview_w;
-                image_widget.set_size_request(preview_w, preview_h);
+                image_widget.pixel_size = px;
+                image_widget.set_size_request(px, px);
             }
         }
 
@@ -117,12 +105,11 @@ namespace Danbooru {
             string? cached = api.get_cached_thumbnail(post.md5, post.file_ext);
             if (cached != null) {
                 try {
-                    var cached_file = GLib.File.new_for_path(cached);
+                    var file = GLib.File.new_for_path(cached);
                     string? etag;
-                    var bytes = yield cached_file.load_bytes_async(null, out etag);
+                    var bytes = yield file.load_bytes_async(null, out etag);
                     if (gen != load_gen) return;
-                    var texture = Gdk.Texture.from_bytes(bytes);
-                    image_widget.set_from_paintable(texture);
+                    image_widget.set_from_paintable(Gdk.Texture.from_bytes(bytes));
                     return;
                 } catch (Error e) {
                     // Fall through to download
@@ -132,23 +119,23 @@ namespace Danbooru {
             try {
                 var url = post.thumbnail_url;
                 if (url == "") return;
-                var raw_bytes = yield api.download_bytes(url);
+
+                var raw = yield api.download_bytes(url);
                 if (gen != load_gen) return;
-                var bytes = new GLib.Bytes(raw_bytes);
-                var texture = Gdk.Texture.from_bytes(bytes);
-                image_widget.set_from_paintable(texture);
-                download_thumbnail_to_cache.begin(api, url);
+
+                image_widget.set_from_paintable(Gdk.Texture.from_bytes(new GLib.Bytes(raw)));
+                cache_later.begin(api, url);
             } catch (Error e) {
                 if (gen != load_gen) return;
                 warning("Failed to load thumbnail for post %s: %s", post.id.to_string(), e.message);
             }
         }
 
-        private async void download_thumbnail_to_cache(Api api, string url) {
+        private async void cache_later(Api api, string url) {
             try {
                 yield api.cache_thumbnail(url, post.md5, post.file_ext);
             } catch (Error e) {
-                // Cache miss is non-critical
+                // Non-critical
             }
         }
     }

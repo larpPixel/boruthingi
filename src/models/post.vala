@@ -3,14 +3,12 @@ using Json;
 namespace Danbooru {
     public class Post : GLib.Object {
         public int64 id { get; set; }
-        public string created_at { get; set; default = ""; }
         public int score { get; set; default = 0; }
         public string source { get; set; default = ""; }
         public string md5 { get; set; default = ""; }
         public string rating { get; set; default = "s"; }
         public int image_width { get; set; default = 0; }
         public int image_height { get; set; default = 0; }
-        public string tag_string { get; set; default = ""; }
         public string tag_string_general { get; set; default = ""; }
         public string tag_string_artist { get; set; default = ""; }
         public string tag_string_character { get; set; default = ""; }
@@ -58,17 +56,25 @@ namespace Danbooru {
 
         public string large_url {
             owned get {
-                if (large_file_url != null && large_file_url != "") return large_file_url;
-                if (md5 == "") return "";
-                return @"$(Config.CDN_URL)/original/$(md5.substring(0,2))/$(md5.substring(2,2))/$(md5).$(file_ext)";
+                if (large_file_url != null && large_file_url != "") {
+                    return large_file_url;
+                }
+                if (md5 == "") {
+                    return "";
+                }
+                return @"$(Config.CDN_URL)/original/$(md5.substring(0, 2))/$(md5.substring(2, 2))/$(md5).$(file_ext)";
             }
         }
 
         public string thumbnail_url {
             owned get {
-                if (preview_file_url != null && preview_file_url != "") return preview_file_url;
-                if (md5 == "") return "";
-                return @"$(Config.CDN_URL)/preview/$(md5.substring(0,2))/$(md5.substring(2,2))/$(md5).jpg";
+                if (preview_file_url != null && preview_file_url != "") {
+                    return preview_file_url;
+                }
+                if (md5 == "") {
+                    return "";
+                }
+                return @"$(Config.CDN_URL)/preview/$(md5.substring(0, 2))/$(md5.substring(2, 2))/$(md5).jpg";
             }
         }
 
@@ -81,10 +87,12 @@ namespace Danbooru {
         public string rating_css_key {
             owned get {
                 switch (rating) {
-                    case "s": return "s";
-                    case "q": return "q";
-                    case "e": return "e";
-                    default: return rating;
+                    case "s":
+                    case "q":
+                    case "e":
+                        return rating;
+                    default:
+                        return "s";
                 }
             }
         }
@@ -92,14 +100,12 @@ namespace Danbooru {
         public static Post from_json(Json.Object obj) {
             var post = new Post();
             post.id = obj.get_int_member("id");
-            post.created_at = get_string(obj, "created_at");
             post.score = (int)obj.get_int_member("score");
             post.source = get_string(obj, "source");
             post.md5 = get_string(obj, "md5");
             post.rating = get_string(obj, "rating");
             post.image_width = (int)obj.get_int_member("image_width");
             post.image_height = (int)obj.get_int_member("image_height");
-            post.tag_string = get_string(obj, "tag_string");
             post.tag_string_general = get_string(obj, "tag_string_general");
             post.tag_string_artist = get_string(obj, "tag_string_artist");
             post.tag_string_character = get_string(obj, "tag_string_character");
@@ -108,7 +114,8 @@ namespace Danbooru {
             post.file_size = (int64)obj.get_int_member("file_size");
             post.file_ext = get_string(obj, "file_ext");
             post.pixiv_id = obj.has_member("pixiv_id") && !obj.get_null_member("pixiv_id")
-                ? (int64)obj.get_int_member("pixiv_id") : -1;
+                ? (int64)obj.get_int_member("pixiv_id")
+                : -1;
             post.file_url = get_string_nullable(obj, "file_url");
             post.large_file_url = get_string_nullable(obj, "large_file_url");
             post.preview_file_url = get_string_nullable(obj, "preview_file_url");
@@ -117,7 +124,7 @@ namespace Danbooru {
         }
 
         private static void populate_best_available_asset(Json.Object obj, Post post) {
-            // Danbooru's file_url is the full-resolution file when it is present.
+            // Prefer the full-resolution file_url when present.
             if (post.file_url != null && post.file_url != "") {
                 post.best_available_url = post.file_url;
                 post.best_available_ext = post.file_ext;
@@ -144,7 +151,9 @@ namespace Danbooru {
             foreach (var element in asset.get_array_member("variants").get_elements()) {
                 var variant = element.get_object();
                 var url = get_string(variant, "url");
-                if (url == "") continue;
+                if (url == "") {
+                    continue;
+                }
 
                 var type = get_string(variant, "type");
                 var ext = get_string(variant, "file_ext");

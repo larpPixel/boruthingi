@@ -232,30 +232,35 @@ namespace Danbooru {
                 var url = post.large_url;
                 if (url == "") {
                     if (expected == loading_post_id) {
-                        spinner.stop();
-                        spinner.visible = false;
-                        empty_label.label = "No preview available";
-                        empty_label.visible = true;
+                        finish_image_load("No preview available");
                     }
                     return;
                 }
 
                 var raw_bytes = yield api.download_bytes(url);
-                if (expected != loading_post_id) return;
+                if (expected != loading_post_id) {
+                    return;
+                }
 
-                var bytes = new GLib.Bytes(raw_bytes);
-                var texture = Gdk.Texture.from_bytes(bytes);
-                picture.set_paintable(texture);
+                picture.set_paintable(Gdk.Texture.from_bytes(new GLib.Bytes(raw_bytes)));
+                finish_image_load(null);
             } catch (Error e) {
-                if (expected != loading_post_id) return;
+                if (expected != loading_post_id) {
+                    return;
+                }
                 warning("Failed to load image for post %s: %s", post.id.to_string(), e.message);
-                empty_label.label = "Failed to load image";
-                empty_label.visible = true;
+                finish_image_load("Failed to load image");
             }
+        }
 
-            if (expected == loading_post_id) {
-                spinner.stop();
-                spinner.visible = false;
+        private void finish_image_load(string? error_or_empty) {
+            spinner.stop();
+            spinner.visible = false;
+            if (error_or_empty != null) {
+                empty_label.label = error_or_empty;
+                empty_label.visible = true;
+            } else {
+                empty_label.visible = false;
             }
         }
 

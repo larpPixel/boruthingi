@@ -7,37 +7,20 @@ namespace Danbooru {
 
     public class Config {
         public const string APP_ID = "com.github.danboruthingi";
-        public const string APP_NAME = "Danboruthingi";
-        public const string VERSION = "0.1.0";
+        public const string VERSION = "0.2.0";
         public const string BASE_URL = "https://danbooru.donmai.us";
         public const string CDN_URL = "https://cdn.donmai.us";
         public const int DEFAULT_LIMIT = 40;
-        public const int THUMBNAIL_WIDTH = 200;
-        public const int THUMBNAIL_HEIGHT = 250;
-        public const int PREVIEW_WIDTH = 180;
-        public const int PREVIEW_HEIGHT = 180;
-        public const string USER_AGENT = "Danboruthingi/0.1.0";
+        public const string USER_AGENT = "Danboruthingi/0.2.0";
 
-        public static int preview_width_for_size(PreviewSize size) {
+        /** Square thumbnail pixel size for a preview setting. */
+        public static int preview_px(PreviewSize size) {
             switch (size) {
                 case PreviewSize.SMALL: return 120;
                 case PreviewSize.LARGE: return 260;
                 case PreviewSize.MEDIUM:
                 default: return 180;
             }
-        }
-
-        public static int preview_height_for_size(PreviewSize size) {
-            switch (size) {
-                case PreviewSize.SMALL: return 120;
-                case PreviewSize.LARGE: return 260;
-                case PreviewSize.MEDIUM:
-                default: return 180;
-            }
-        }
-
-        public static int thumbnail_width_for_size(PreviewSize size) {
-            return preview_width_for_size(size) + 20;
         }
 
         public static int flowbox_max_children_for_size(PreviewSize size) {

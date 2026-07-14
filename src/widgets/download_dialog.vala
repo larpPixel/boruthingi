@@ -7,10 +7,7 @@ namespace Danbooru {
         private Gtk.Button start_button;
         private Gtk.Button close_button;
         private Gtk.Button retry_button;
-        private Gtk.Box button_box;
-        private Gtk.Label count_label;
         private Gtk.Entry dir_entry;
-        private Gtk.Button browse_button;
 
         private Post[] posts;
         private Post[] current_batch;
@@ -27,8 +24,7 @@ namespace Danbooru {
                 title: "Batch Download",
                 modal: true,
                 default_width: 700,
-                default_height: 500,
-                transient_for: null
+                default_height: 500
             );
             this.posts = posts;
             this.current_batch = posts;
@@ -44,41 +40,32 @@ namespace Danbooru {
             vbox.margin_top = 12;
             vbox.margin_bottom = 12;
 
-            // Header
-            count_label = new Gtk.Label(@"$(posts.length) selected posts - highest quality available");
+            var count_label = new Gtk.Label(@"$(posts.length) selected posts — highest quality available");
             count_label.add_css_class("heading");
             count_label.halign = Gtk.Align.START;
             vbox.append(count_label);
 
-            // Directory selection
             var dir_box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
-            var dir_label = new Gtk.Label("Save to:");
             dir_entry = new Gtk.Entry();
             dir_entry.hexpand = true;
+            dir_entry.text = Environment.get_user_special_dir(GLib.UserDirectory.PICTURES)
+                ?? Environment.get_home_dir();
 
-            var pictures = Environment.get_user_special_dir(GLib.UserDirectory.PICTURES);
-            dir_entry.text = pictures ?? Environment.get_home_dir();
-
-            browse_button = new Gtk.Button.with_label("Browse...");
+            var browse_button = new Gtk.Button.with_label("Browse…");
             browse_button.clicked.connect(on_browse);
-            dir_box.append(dir_label);
+            dir_box.append(new Gtk.Label("Save to:"));
             dir_box.append(dir_entry);
             dir_box.append(browse_button);
             vbox.append(dir_box);
 
-            // File list
             var scrolled = new Gtk.ScrolledWindow();
             scrolled.vexpand = true;
-
             file_list = new Gtk.ListBox();
             file_list.add_css_class("boxed-list");
-
             populate_file_list();
-
             scrolled.child = file_list;
             vbox.append(scrolled);
 
-            // Progress
             progress_bar = new Gtk.ProgressBar();
             progress_bar.visible = false;
             vbox.append(progress_bar);
@@ -88,8 +75,7 @@ namespace Danbooru {
             status_label.wrap = true;
             vbox.append(status_label);
 
-            // Buttons
-            button_box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+            var button_box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
             button_box.halign = Gtk.Align.END;
 
             cancel_button = new Gtk.Button.with_label("Cancel");
@@ -103,6 +89,7 @@ namespace Danbooru {
 
             start_button = new Gtk.Button.with_label("Start Download");
             start_button.add_css_class("suggested-action");
+            start_button.clicked.connect(on_start_download);
 
             retry_button = new Gtk.Button.with_label("Retry Failed");
             retry_button.add_css_class("suggested-action");
@@ -112,8 +99,6 @@ namespace Danbooru {
             close_button = new Gtk.Button.with_label("Close");
             close_button.visible = false;
             close_button.clicked.connect(() => close());
-
-            start_button.clicked.connect(on_start_download);
 
             button_box.append(cancel_button);
             button_box.append(retry_button);
@@ -125,11 +110,7 @@ namespace Danbooru {
         }
 
         private void populate_file_list() {
-            while (true) {
-                var row = file_list.get_row_at_index(0);
-                if (row == null) break;
-                file_list.remove(row);
-            }
+            clear_list();
 
             foreach (var post in posts) {
                 var content = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
@@ -138,15 +119,7 @@ namespace Danbooru {
                 var icon = new Gtk.Image.from_icon_name("image-x-generic-symbolic");
                 icon.pixel_size = 20;
 
-                string first_tag = "untitled";
-                if (post.tag_string_general != "") {
-                    var parts = post.tag_string_general.split(" ");
-                    if (parts.length > 0 && parts[0] != "") {
-                        first_tag = parts[0];
-                    }
-                }
-
-                var info = new Gtk.Label(@"#$(post.id) · $(first_tag).$(post.download_file_ext)");
+                var info = new Gtk.Label(@"#$(post.id) · $(first_tag(post)).$(post.download_file_ext)");
                 info.hexpand = true;
                 info.halign = Gtk.Align.START;
                 info.ellipsize = Pango.EllipsizeMode.END;
@@ -167,7 +140,6 @@ namespace Danbooru {
                 content.append(status_text);
                 content.append(status_icon);
 
-                // ListBox wraps children in a ListBoxRow — store data on the row we query later.
                 var row = new Gtk.ListBoxRow();
                 row.child = content;
                 row.set_data<Gtk.Image>("status-icon", status_icon);
@@ -176,9 +148,27 @@ namespace Danbooru {
             }
         }
 
+        private void clear_list() {
+            while (true) {
+                var row = file_list.get_row_at_index(0);
+                if (row == null) break;
+                file_list.remove(row);
+            }
+        }
+
+        private static string first_tag(Post post) {
+            if (post.tag_string_general == "") {
+                return "untitled";
+            }
+            var parts = post.tag_string_general.split(" ");
+            return (parts.length > 0 && parts[0] != "") ? parts[0] : "untitled";
+        }
+
         private int index_of_post(Post post) {
             for (int i = 0; i < posts.length; i++) {
-                if (posts[i].id == post.id) return i;
+                if (posts[i].id == post.id) {
+                    return i;
+                }
             }
             return -1;
         }
@@ -195,7 +185,7 @@ namespace Danbooru {
                         dir_entry.text = folder.get_path();
                     }
                 } catch (Error e) {
-                    // User cancelled
+                    // Cancelled
                 }
             });
         }
@@ -211,20 +201,17 @@ namespace Danbooru {
             completed = 0;
             failed = 0;
             failed_indices = new GLib.List<int>();
-
             download_next.begin();
         }
 
         private void on_retry_failed() {
-            if (failed_indices.length() == 0) return;
+            if (failed_indices.length() == 0) {
+                return;
+            }
 
             Post[] retry_posts = {};
             foreach (int idx in failed_indices) {
                 retry_posts += posts[idx];
-            }
-
-            // Reset status for the rows being retried
-            foreach (int idx in failed_indices) {
                 set_row_status(idx, "waiting", "");
             }
 
@@ -246,54 +233,60 @@ namespace Danbooru {
 
             var post = current_batch[current_idx];
             int original_index = index_of_post(post);
-            if (original_index < 0) original_index = current_idx;
+            if (original_index < 0) {
+                original_index = current_idx;
+            }
 
-            status_label.label = @"Downloading #$(post.id) ($(current_idx + 1)/$(total))...";
+            status_label.label = @"Downloading #$(post.id) ($(current_idx + 1)/$(total))…";
             progress_bar.fraction = (double)(completed + failed) / total;
             set_row_status(original_index, "downloading", "");
 
-            string? error_message = null;
             try {
                 var url = post.original_url;
-                if (url == "") throw new IOError.NOT_FOUND("No URL for post");
+                if (url == "") {
+                    throw new IOError.NOT_FOUND("No URL for post");
+                }
 
-                var dest_path = GLib.Path.build_filename(dir_entry.text, @"$(post.id)_$(post.md5).$(post.download_file_ext)");
-                yield api.download_to_file(url, dest_path, cancellable);
+                var dest = GLib.Path.build_filename(
+                    dir_entry.text,
+                    @"$(post.id)_$(post.md5).$(post.download_file_ext)"
+                );
+                yield api.download_to_file(url, dest, cancellable);
                 completed++;
                 set_row_status(original_index, "completed", "");
-
             } catch (Error e) {
-                warning("Download failed for post %lld: %s", post.id, e.message);
-                error_message = e.message;
+                warning("Download failed for post %s: %s", post.id.to_string(), e.message);
                 failed++;
                 failed_indices.append(original_index);
-                set_row_status(original_index, "failed", error_message);
+                set_row_status(original_index, "failed", e.message);
             }
 
-            // Continue with next
             download_next.begin();
         }
 
         private void set_row_status(int index, string status, string message) {
             var row = file_list.get_row_at_index(index);
-            if (row == null) return;
+            if (row == null) {
+                return;
+            }
 
             var icon = row.get_data<Gtk.Image>("status-icon");
             var label = row.get_data<Gtk.Label>("status-text");
 
             if (icon != null) {
-                icon.visible = true;
                 switch (status) {
                     case "downloading":
+                        icon.visible = true;
                         icon.set_from_icon_name("emblem-synchronizing-symbolic");
                         break;
                     case "completed":
+                        icon.visible = true;
                         icon.set_from_icon_name("emblem-ok-symbolic");
                         break;
                     case "failed":
+                        icon.visible = true;
                         icon.set_from_icon_name("emblem-important-symbolic");
                         break;
-                    case "waiting":
                     default:
                         icon.visible = false;
                         break;
@@ -306,7 +299,7 @@ namespace Danbooru {
                     label.tooltip_text = message;
                     label.visible = true;
                 } else if (status == "downloading") {
-                    label.label = "Downloading...";
+                    label.label = "Downloading…";
                     label.visible = true;
                 } else {
                     label.label = "";
