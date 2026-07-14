@@ -67,30 +67,12 @@ namespace Danbooru {
         private void build_ui() {
             var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 
-            var header = new Adw.HeaderBar();
-            header.show_title = true;
-            header.title_widget = new Adw.WindowTitle("Danboruthingi", "Danbooru browser");
-
-            var explicit_control = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
-            var explicit_label = new Gtk.Label("Explicit");
-            show_explicit_switch = new Gtk.Switch();
-            show_explicit_switch.valign = Gtk.Align.CENTER;
-            show_explicit_switch.tooltip_text = "Include explicit-rated posts in searches without a rating tag";
-            explicit_control.append(explicit_label);
-            explicit_control.append(show_explicit_switch);
-            header.pack_end(explicit_control);
-
-            vbox.append(header);
-
-            // Search toolbar
+            // Top toolbar (replaces headerbar for tiling window managers)
             var search_clamp = new Adw.Clamp();
             search_clamp.maximum_size = 1240;
             search_clamp.tightening_threshold = 800;
             search_toolbar = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
-            search_toolbar.margin_start = 12;
-            search_toolbar.margin_end = 12;
-            search_toolbar.margin_top = 8;
-            search_toolbar.margin_bottom = 8;
+            search_toolbar.add_css_class("app-toolbar");
 
             search_entry = new Gtk.SearchEntry();
             search_entry.hexpand = true;
@@ -133,6 +115,15 @@ namespace Danbooru {
             sort_dropdown.tooltip_text = "Sort results by";
             sort_dropdown.valign = Gtk.Align.CENTER;
 
+            // Explicit content toggle
+            var explicit_control = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+            var explicit_label = new Gtk.Label("Explicit");
+            show_explicit_switch = new Gtk.Switch();
+            show_explicit_switch.valign = Gtk.Align.CENTER;
+            show_explicit_switch.tooltip_text = "Include explicit-rated posts in searches without a rating tag";
+            explicit_control.append(explicit_label);
+            explicit_control.append(show_explicit_switch);
+
             search_toolbar.append(search_entry);
             search_toolbar.append(search_btn);
             search_toolbar.append(limit_label);
@@ -141,6 +132,7 @@ namespace Danbooru {
             search_toolbar.append(size_dropdown);
             search_toolbar.append(sort_label);
             search_toolbar.append(sort_dropdown);
+            search_toolbar.append(explicit_control);
             search_clamp.child = search_toolbar;
             vbox.append(search_clamp);
 

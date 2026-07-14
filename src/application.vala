@@ -165,11 +165,15 @@ namespace Danbooru {
                     font-weight: 600;
                 }
 
-                /* === Toolbar controls === */
-                .toolbar-search {
-                    background: alpha(currentColor, 0.04);
-                    border-radius: 8px;
-                    padding: 4px;
+                /* === App toolbars (main search bar + detail header) === */
+                .app-toolbar {
+                    background: @headerbar_bg_color;
+                    border-bottom: 1px solid @borders;
+                    border-radius: 0;
+                    padding: 8px 12px;
+                }
+                .app-toolbar .suggested-action {
+                    border-radius: 6px;
                 }
 
                 /* === Download dialog === */

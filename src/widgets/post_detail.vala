@@ -24,13 +24,13 @@ namespace Danbooru {
         }
 
         construct {
-            // Detail header — back, ID, actions
-            var detail_header = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
-            detail_header.margin_start = 8;
-            detail_header.margin_end = 8;
-            detail_header.margin_top = 4;
-            detail_header.margin_bottom = 4;
-            detail_header.add_css_class("detail-header-box");
+            // Detail header — styled like the main app toolbar
+            var detail_clamp = new Adw.Clamp();
+            detail_clamp.maximum_size = 1240;
+            detail_clamp.tightening_threshold = 800;
+
+            var detail_header = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+            detail_header.add_css_class("app-toolbar");
 
             var back_btn = new Gtk.Button.from_icon_name("go-previous-symbolic");
             back_btn.tooltip_text = "Back to grid";
@@ -42,18 +42,21 @@ namespace Danbooru {
             id_label.halign = Gtk.Align.START;
 
             open_button = new Gtk.Button.with_label("Open in Browser");
-            open_button.add_css_class("pill");
+            open_button.tooltip_text = "Open post page in web browser";
             open_button.clicked.connect(on_open_browser);
 
             download_button = new Gtk.Button.with_label("Download Best Available");
             download_button.add_css_class("suggested-action");
+            download_button.tooltip_text = "Download the highest quality available";
             download_button.clicked.connect(on_download_original);
 
             detail_header.append(back_btn);
             detail_header.append(id_label);
             detail_header.append(open_button);
             detail_header.append(download_button);
-            this.append(detail_header);
+
+            detail_clamp.child = detail_header;
+            this.append(detail_clamp);
 
             // Scrollable content
             var scrolled = new Gtk.ScrolledWindow();
