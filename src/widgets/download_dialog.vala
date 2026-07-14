@@ -132,36 +132,46 @@ namespace Danbooru {
             }
 
             foreach (var post in posts) {
-                var row = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
-                row.margin_start = 6;
-                row.margin_end = 6;
-                row.margin_top = 3;
-                row.margin_bottom = 3;
+                var content = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+                content.add_css_class("download-file-row");
 
                 var icon = new Gtk.Image.from_icon_name("image-x-generic-symbolic");
-                icon.pixel_size = 24;
+                icon.pixel_size = 20;
 
-                var info = new Gtk.Label(@"#$(post.id) - $(post.tag_string_general != "" ? post.tag_string_general.split(" ")[0] : "untitled").$(post.download_file_ext)");
+                string first_tag = "untitled";
+                if (post.tag_string_general != "") {
+                    var parts = post.tag_string_general.split(" ");
+                    if (parts.length > 0 && parts[0] != "") {
+                        first_tag = parts[0];
+                    }
+                }
+
+                var info = new Gtk.Label(@"#$(post.id) · $(first_tag).$(post.download_file_ext)");
                 info.hexpand = true;
                 info.halign = Gtk.Align.START;
                 info.ellipsize = Pango.EllipsizeMode.END;
 
                 var status_icon = new Gtk.Image.from_icon_name("emblem-important-symbolic");
+                status_icon.add_css_class("download-status-icon");
                 status_icon.visible = false;
 
                 var status_text = new Gtk.Label("");
                 status_text.halign = Gtk.Align.END;
-                status_text.add_css_class("dim-label");
+                status_text.add_css_class("meta-label");
+                status_text.ellipsize = Pango.EllipsizeMode.END;
+                status_text.max_width_chars = 28;
                 status_text.visible = false;
 
-                row.append(icon);
-                row.append(info);
-                row.append(status_text);
-                row.append(status_icon);
+                content.append(icon);
+                content.append(info);
+                content.append(status_text);
+                content.append(status_icon);
 
+                // ListBox wraps children in a ListBoxRow — store data on the row we query later.
+                var row = new Gtk.ListBoxRow();
+                row.child = content;
                 row.set_data<Gtk.Image>("status-icon", status_icon);
                 row.set_data<Gtk.Label>("status-text", status_text);
-
                 file_list.append(row);
             }
         }

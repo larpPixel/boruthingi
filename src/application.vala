@@ -203,24 +203,31 @@ namespace Danbooru {
                 }
 
                 /* ============================================================
-                   Thumbnail grid
+                   Thumbnail grid — edge-to-edge flow, cards are the only surface
                    ============================================================ */
+                .post-grid {
+                    background: transparent;
+                }
+                .post-grid > flowboxchild {
+                    padding: 0;
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                }
                 .thumbnail-card {
-                    background: #1a1a1a;
+                    background: #111111;
                     border: 1px solid #2e2e2e;
                     border-radius: 3px;
-                    transition: border-color 80ms ease, background 80ms ease;
+                    transition: border-color 80ms ease;
                 }
                 .thumbnail-card:hover {
                     border-color: #b8860b;
-                    background: #1c1c1c;
                 }
                 .thumbnail-card.selected {
-                    border: 1px solid #b8860b;
-                    background: alpha(#b8860b, 0.08);
+                    border-color: #b8860b;
+                    box-shadow: inset 0 0 0 1px #b8860b;
                 }
                 .thumbnail-image {
-                    border-radius: 0;
                     background: #111111;
                 }
 
@@ -253,13 +260,23 @@ namespace Danbooru {
                 }
 
                 /* ============================================================
-                   Metadata (detail page)
+                   Detail — stage + rail, not boxes-in-frames
                    ============================================================ */
+                .detail-stage {
+                    background: #0e0e0e;
+                }
+                .detail-rail {
+                    background: #1a1a1a;
+                    border-left: 1px solid #2e2e2e;
+                    min-width: 280px;
+                }
                 .meta-label {
-                    font-size: 0.75em;
+                    font-size: 0.72em;
                     font-weight: 600;
                     font-family: monospace;
                     color: #888888;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
                 }
                 .meta-value {
                     font-size: 0.85em;
@@ -267,17 +284,8 @@ namespace Danbooru {
                     color: #d0d0d0;
                 }
 
-                .image-frame {
-                    border-radius: 3px;
-                    border: 1px solid #2e2e2e;
-                    background: #111111;
-                }
-                .detail-image {
-                    border-radius: 0;
-                }
-
                 /* ============================================================
-                   Tags
+                   Tags — flat chips in one flow
                    ============================================================ */
                 .tag-button {
                     padding: 3px 9px;
@@ -309,16 +317,6 @@ namespace Danbooru {
                     border-color: alpha(#808080, 0.45);
                     color: #a0a0a0;
                 }
-                .tag-section-label {
-                    font-size: 0.7em;
-                    font-weight: 700;
-                    font-family: monospace;
-                    color: #707070;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    min-width: 80px;
-                }
-
                 /* ============================================================
                    Selection checkbox on thumbnails
                    ============================================================ */

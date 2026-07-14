@@ -17,21 +17,21 @@ namespace Danbooru {
         private Gtk.Stack main_stack;
         private AppBar search_toolbar;
         private AppBar bottom_bar;
-        private Gtk.Box grid_page;
         private PostDetailView detail_view;
 
         // Grid
+        private Gtk.Stack grid_stack;
         private Gtk.FlowBox flowbox;
         private Gtk.ScrolledWindow grid_scroll;
         private Adw.StatusPage status_page;
         private Gtk.Spinner grid_spinner;
+        private Gtk.Spinner load_more_spinner;
 
         // Continuous scroll
         private int current_page = 1;
         private string current_tags = "";
         private bool loading_more = false;
         private bool has_more = true;
-        private Gtk.Spinner load_more_spinner;
         private int search_gen = 0;
         private PreviewSize preview_size = PreviewSize.MEDIUM;
 
@@ -65,141 +65,132 @@ namespace Danbooru {
         // ───────────── Build UI ─────────────
 
         private void build_ui() {
-            var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+            var root = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
 
-            // Top bar — same AppBar chrome as bottom + detail
+            // ── Top bar: controls pack straight into AppBar (no cluster boxes) ──
             search_toolbar = new AppBar(false);
 
             search_entry = new Gtk.SearchEntry();
             search_entry.hexpand = true;
             search_entry.placeholder_text = "Search tags, for example: cat rating:s";
+            search_entry.activate.connect(on_search_clicked);
 
             var search_btn = new Gtk.Button.from_icon_name("edit-find-symbolic");
             search_btn.add_css_class("suggested-action");
             search_btn.tooltip_text = "Search";
             search_btn.clicked.connect(on_search_clicked);
 
-            var search_cluster = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
-            search_cluster.hexpand = true;
-            search_cluster.valign = Gtk.Align.CENTER;
-            search_cluster.append(search_entry);
-            search_cluster.append(search_btn);
+            search_toolbar.pack_start(search_entry);
+            search_toolbar.pack_start(search_btn);
 
-            var size_label = make_bar_label("Size");
             var size_model = new Gtk.StringList(new string[] { "Small", "Medium", "Large" });
             size_dropdown = new Gtk.DropDown(size_model, null);
             size_dropdown.selected = 1;
             size_dropdown.tooltip_text = "Thumbnail preview size";
             size_dropdown.valign = Gtk.Align.CENTER;
 
-            var limit_label = make_bar_label("Limit");
             limit_spin = new Gtk.SpinButton.with_range(10, 100, 10);
             limit_spin.value = Config.DEFAULT_LIMIT;
             limit_spin.valign = Gtk.Align.CENTER;
             limit_spin.tooltip_text = "Results per page";
 
-            var sort_label = make_bar_label("Sort");
             var sort_model = new Gtk.StringList(new string[] {
-                "Default",
-                "Score",
-                "Favorites",
-                "Rank",
-                "Newest",
-                "Random"
+                "Default", "Score", "Favorites", "Rank", "Newest", "Random"
             });
             sort_dropdown = new Gtk.DropDown(sort_model, null);
             sort_dropdown.selected = 0;
             sort_dropdown.tooltip_text = "Sort results by";
             sort_dropdown.valign = Gtk.Align.CENTER;
 
-            var explicit_label = make_bar_label("Explicit");
             show_explicit_switch = new Gtk.Switch();
             show_explicit_switch.valign = Gtk.Align.CENTER;
             show_explicit_switch.tooltip_text = "Include explicit-rated posts in searches without a rating tag";
 
-            var options_cluster = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
-            options_cluster.valign = Gtk.Align.CENTER;
-            options_cluster.append(size_label);
-            options_cluster.append(size_dropdown);
-            options_cluster.append(limit_label);
-            options_cluster.append(limit_spin);
-            options_cluster.append(sort_label);
-            options_cluster.append(sort_dropdown);
-            options_cluster.append(AppBar.make_separator());
-            options_cluster.append(explicit_label);
-            options_cluster.append(show_explicit_switch);
+            // End slot is LTR: first packed is leftmost of the group.
+            search_toolbar.pack_end(make_bar_label("Size"));
+            search_toolbar.pack_end(size_dropdown);
+            search_toolbar.pack_end(make_bar_label("Limit"));
+            search_toolbar.pack_end(limit_spin);
+            search_toolbar.pack_end(make_bar_label("Sort"));
+            search_toolbar.pack_end(sort_dropdown);
+            search_toolbar.pack_end(AppBar.make_separator());
+            search_toolbar.pack_end(make_bar_label("Explicit"));
+            search_toolbar.pack_end(show_explicit_switch);
 
-            search_toolbar.pack_start(search_cluster);
-            search_toolbar.pack_end(options_cluster);
-            vbox.append(search_toolbar);
+            root.append(search_toolbar);
 
-            // Main content stack
+            // ── Main: grid | detail ──
             main_stack = new Gtk.Stack();
             main_stack.vexpand = true;
             main_stack.transition_type = Gtk.StackTransitionType.SLIDE_LEFT_RIGHT;
 
-            // -- Grid page --
-            grid_page = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+            // Grid is one overlay: stack (empty | scroll) + spinners. No page box sandwich.
+            var grid_overlay = new Gtk.Overlay();
+            grid_overlay.vexpand = true;
+
+            grid_stack = new Gtk.Stack();
+            grid_stack.vexpand = true;
+            grid_stack.transition_type = Gtk.StackTransitionType.CROSSFADE;
+            grid_stack.transition_duration = 120;
 
             status_page = new Adw.StatusPage();
             status_page.title = "Danboruthingi";
             status_page.description = "Enter tags above to browse Danbooru";
             status_page.icon_name = "edit-find-symbolic";
-            status_page.vexpand = true;
+            grid_stack.add_named(status_page, "empty");
 
             grid_scroll = new Gtk.ScrolledWindow();
             grid_scroll.vexpand = true;
-            grid_scroll.visible = false;
+            grid_scroll.hexpand = true;
+            grid_scroll.propagate_natural_height = false;
 
             flowbox = new Gtk.FlowBox();
+            flowbox.add_css_class("post-grid");
             flowbox.max_children_per_line = Config.flowbox_max_children_for_size(preview_size);
-            flowbox.min_children_per_line = 2;
+            flowbox.min_children_per_line = 1;
             flowbox.selection_mode = Gtk.SelectionMode.NONE;
-            flowbox.column_spacing = 12;
-            flowbox.row_spacing = 12;
-            flowbox.homogeneous = false;
+            flowbox.column_spacing = 8;
+            flowbox.row_spacing = 8;
+            flowbox.homogeneous = true;
+            flowbox.valign = Gtk.Align.START;
+            flowbox.halign = Gtk.Align.FILL;
+            // Padding lives on the flow itself — no Clamp / wrapper margins.
+            flowbox.margin_start = 10;
+            flowbox.margin_end = 10;
+            flowbox.margin_top = 10;
+            flowbox.margin_bottom = 10;
+            grid_scroll.child = flowbox;
+            grid_stack.add_named(grid_scroll, "grid");
 
-            var grid_clamp = new Adw.Clamp();
-            grid_clamp.maximum_size = 1240;
-            grid_clamp.tightening_threshold = 800;
-            grid_clamp.margin_start = 12;
-            grid_clamp.margin_end = 12;
-            grid_clamp.margin_top = 12;
-            grid_clamp.margin_bottom = 12;
-            grid_clamp.child = flowbox;
-            grid_scroll.child = grid_clamp;
-
-            // Bottom loading spinner (below the scrolled grid)
-            load_more_spinner = new Gtk.Spinner();
-            load_more_spinner.halign = Gtk.Align.CENTER;
-            load_more_spinner.margin_top = 12;
-            load_more_spinner.margin_bottom = 16;
-            load_more_spinner.visible = false;
-
-            grid_page.append(status_page);
-            grid_page.append(grid_scroll);
-            grid_page.append(load_more_spinner);
-
-            // Initial-load spinner overlay
-            var grid_overlay = new Gtk.Overlay();
-            grid_overlay.child = grid_page;
+            grid_overlay.child = grid_stack;
 
             grid_spinner = new Gtk.Spinner();
             grid_spinner.halign = Gtk.Align.CENTER;
             grid_spinner.valign = Gtk.Align.CENTER;
+            grid_spinner.width_request = 28;
+            grid_spinner.height_request = 28;
             grid_spinner.visible = false;
             grid_overlay.add_overlay(grid_spinner);
 
+            load_more_spinner = new Gtk.Spinner();
+            load_more_spinner.halign = Gtk.Align.CENTER;
+            load_more_spinner.valign = Gtk.Align.END;
+            load_more_spinner.margin_bottom = 18;
+            load_more_spinner.width_request = 22;
+            load_more_spinner.height_request = 22;
+            load_more_spinner.visible = false;
+            grid_overlay.add_overlay(load_more_spinner);
+
             main_stack.add_named(grid_overlay, "grid");
 
-            // -- Detail page --
             detail_view = new PostDetailView();
             detail_view.back.connect(on_back_to_grid);
             detail_view.tag_clicked.connect(on_tag_clicked_from_detail);
             main_stack.add_named(detail_view, "detail");
 
-            vbox.append(main_stack);
+            root.append(main_stack);
 
+            // ── Bottom bar ──
             bottom_bar = new AppBar(true);
 
             selection_label = new Gtk.Label("0 selected");
@@ -230,11 +221,8 @@ namespace Danbooru {
             bottom_bar.pack_end(refresh_btn);
             bottom_bar.pack_end(download_btn);
 
-            vbox.append(bottom_bar);
-            this.content = vbox;
-
-            // Enter key triggers search
-            search_entry.activate.connect(on_search_clicked);
+            root.append(bottom_bar);
+            this.content = root;
         }
 
         private static Gtk.Label make_bar_label(string text) {
@@ -382,11 +370,11 @@ namespace Danbooru {
 
         private void search(string tags) {
             current_tags = tags;
-            status_page.visible = false;
-            grid_scroll.visible = true;
+            grid_stack.visible_child_name = "grid";
             grid_spinner.visible = true;
             grid_spinner.start();
             load_more_spinner.visible = false;
+            load_more_spinner.stop();
 
             search_posts.begin(tags, current_page);
         }
@@ -432,13 +420,14 @@ namespace Danbooru {
 
                     // Only show empty state on the very first page
                     if (page == 1 && posts.length() == 0) {
-                        grid_scroll.visible = false;
-                        status_page.visible = true;
                         status_page.title = "No Results";
                         status_page.description = current_tags != ""
                             ? @"No posts found for \"$(current_tags)\""
                             : "Enter tags to search";
                         status_page.icon_name = "edit-find-symbolic";
+                        grid_stack.visible_child_name = "empty";
+                    } else {
+                        grid_stack.visible_child_name = "grid";
                     }
 
                     return false;
@@ -461,13 +450,17 @@ namespace Danbooru {
                     }
 
                     if (page > 1) {
+                        // Roll back so the next scroll can retry this page.
+                        if (current_page > 1) {
+                            current_page--;
+                        }
+                        has_more = true;
                         warning("Failed to load page %d: %s", page, err_msg);
                     } else {
-                        grid_scroll.visible = false;
-                        status_page.visible = true;
                         status_page.title = "Search Failed";
                         status_page.description = err_msg;
                         status_page.icon_name = "dialog-error-symbolic";
+                        grid_stack.visible_child_name = "empty";
                     }
                     return false;
                 });
@@ -602,6 +595,8 @@ namespace Danbooru {
         // ───────────── Detail ─────────────
 
         private void show_detail(Post post) {
+            // Don't keep bulk-select loading while the user is in detail.
+            stop_select_all_mode();
             search_toolbar.visible = false;
             bottom_bar.visible = false;
             detail_view.display_post(post, api);

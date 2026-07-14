@@ -1,30 +1,35 @@
 namespace Danbooru {
+    /**
+     * Detail view: full-bleed image stage on the left, slim info rail on the right.
+     * No frames-in-boxes nesting — surface + rail only.
+     */
     public class PostDetailView : Gtk.Box {
         public signal void back();
         public signal void tag_clicked(string tag);
 
         public Post post { get; set; }
 
-        private Gtk.Image image_widget;
         private Gtk.Label id_label;
+        private Gtk.Picture picture;
+        private Gtk.Spinner spinner;
+        private Gtk.Label empty_label;
         private Gtk.Label rating_value;
         private Gtk.Label score_value;
         private Gtk.Label dims_value;
         private Gtk.Label file_size_value;
         private Gtk.Label source_value;
         private Gtk.Label pixiv_value;
-        private Gtk.Box tags_container;
+        private Gtk.FlowBox tags_flow;
         private Gtk.Button open_button;
         private Gtk.Button download_button;
-        private Gtk.Spinner spinner;
         private Api? current_api;
+        private int64 loading_post_id = 0;
 
         public PostDetailView() {
             Object(orientation: Gtk.Orientation.VERTICAL, spacing: 0);
         }
 
         construct {
-            // Same AppBar chrome as the grid search + selection bars
             var detail_header = new AppBar(false);
 
             var back_btn = new Gtk.Button.from_icon_name("go-previous-symbolic");
@@ -51,82 +56,106 @@ namespace Danbooru {
             detail_header.pack_start(id_label);
             detail_header.pack_end(open_button);
             detail_header.pack_end(download_button);
+            append(detail_header);
 
-            this.append(detail_header);
+            // Body: image stage | info rail
+            var body = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0);
+            body.vexpand = true;
+            body.hexpand = true;
 
-            // Scrollable content
-            var scrolled = new Gtk.ScrolledWindow();
-            scrolled.vexpand = true;
-            scrolled.hscrollbar_policy = Gtk.PolicyType.NEVER;
+            // --- Image stage (fills remaining space) ---
+            var stage = new Gtk.Overlay();
+            stage.hexpand = true;
+            stage.vexpand = true;
+            stage.add_css_class("detail-stage");
 
-            var content = new Gtk.Box(Gtk.Orientation.VERTICAL, 10);
-            content.margin_start = 12;
-            content.margin_end = 12;
-            content.margin_top = 12;
-            content.margin_bottom = 12;
-
-            // Image
-            var image_frame = new Gtk.Frame(null);
-            image_frame.add_css_class("image-frame");
+            picture = new Gtk.Picture();
+            picture.content_fit = Gtk.ContentFit.CONTAIN;
+            picture.hexpand = true;
+            picture.vexpand = true;
+            picture.can_shrink = true;
+            stage.child = picture;
 
             spinner = new Gtk.Spinner();
-            spinner.start();
+            spinner.halign = Gtk.Align.CENTER;
+            spinner.valign = Gtk.Align.CENTER;
+            spinner.width_request = 32;
+            spinner.height_request = 32;
+            stage.add_overlay(spinner);
 
-            image_widget = new Gtk.Image();
-            image_widget.vexpand = false;
-            image_widget.hexpand = true;
-            image_widget.pixel_size = 800;
-            image_widget.add_css_class("detail-image");
+            empty_label = new Gtk.Label("No preview");
+            empty_label.add_css_class("meta-label");
+            empty_label.halign = Gtk.Align.CENTER;
+            empty_label.valign = Gtk.Align.CENTER;
+            empty_label.visible = false;
+            stage.add_overlay(empty_label);
 
-            var image_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
-            image_box.halign = Gtk.Align.CENTER;
-            image_box.append(spinner);
-            image_box.append(image_widget);
-            image_frame.child = image_box;
-            content.append(image_frame);
+            body.append(stage);
 
-            // Metadata grid
-            var meta_grid = new Gtk.Grid();
-            meta_grid.column_spacing = 16;
-            meta_grid.row_spacing = 4;
-            meta_grid.margin_top = 4;
-            meta_grid.margin_start = 4;
+            // --- Info rail ---
+            var rail_scroll = new Gtk.ScrolledWindow();
+            rail_scroll.hscrollbar_policy = Gtk.PolicyType.NEVER;
+            rail_scroll.vexpand = true;
+            rail_scroll.width_request = 300;
+            rail_scroll.add_css_class("detail-rail");
+
+            var rail = new Gtk.Box(Gtk.Orientation.VERTICAL, 14);
+            rail.margin_start = 14;
+            rail.margin_end = 14;
+            rail.margin_top = 14;
+            rail.margin_bottom = 14;
+
+            var meta = new Gtk.Grid();
+            meta.column_spacing = 12;
+            meta.row_spacing = 6;
+            meta.halign = Gtk.Align.FILL;
 
             int r = 0;
-            add_meta_row(meta_grid, ref r, "Rating", out rating_value);
-            add_meta_row(meta_grid, ref r, "Score", out score_value);
-            add_meta_row(meta_grid, ref r, "Dimensions", out dims_value);
-            add_meta_row(meta_grid, ref r, "File Size", out file_size_value);
-            add_meta_row(meta_grid, ref r, "Source", out source_value);
-            add_meta_row(meta_grid, ref r, "Pixiv ID", out pixiv_value);
+            add_meta_row(meta, ref r, "Rating", out rating_value);
+            add_meta_row(meta, ref r, "Score", out score_value);
+            add_meta_row(meta, ref r, "Dimensions", out dims_value);
+            add_meta_row(meta, ref r, "File Size", out file_size_value);
+            add_meta_row(meta, ref r, "Source", out source_value);
+            add_meta_row(meta, ref r, "Pixiv ID", out pixiv_value);
+            rail.append(meta);
 
-            content.append(meta_grid);
+            var tags_title = new Gtk.Label("Tags");
+            tags_title.add_css_class("section-title");
+            tags_title.halign = Gtk.Align.START;
+            rail.append(tags_title);
 
-            // Tags
-            tags_container = new Gtk.Box(Gtk.Orientation.VERTICAL, 12);
-            tags_container.margin_top = 8;
+            tags_flow = new Gtk.FlowBox();
+            tags_flow.selection_mode = Gtk.SelectionMode.NONE;
+            tags_flow.column_spacing = 6;
+            tags_flow.row_spacing = 6;
+            tags_flow.homogeneous = false;
+            tags_flow.max_children_per_line = 20;
+            tags_flow.min_children_per_line = 1;
+            tags_flow.valign = Gtk.Align.START;
+            tags_flow.halign = Gtk.Align.FILL;
+            rail.append(tags_flow);
 
-            var tags_header = new Gtk.Label("Tags");
-            tags_header.add_css_class("section-title");
-            tags_header.halign = Gtk.Align.START;
-            tags_container.append(tags_header);
+            rail_scroll.child = rail;
+            body.append(rail_scroll);
 
-            content.append(tags_container);
-            scrolled.child = content;
-            this.append(scrolled);
+            append(body);
         }
 
         private void add_meta_row(Gtk.Grid grid, ref int row, string label, out Gtk.Label value_label) {
-            var lbl = new Gtk.Label(@"$(label):");
-            lbl.halign = Gtk.Align.END;
+            var lbl = new Gtk.Label(label);
+            lbl.halign = Gtk.Align.START;
+            lbl.valign = Gtk.Align.START;
             lbl.add_css_class("meta-label");
-            lbl.hexpand = false;
 
-            value_label = new Gtk.Label("...");
+            value_label = new Gtk.Label("…");
             value_label.halign = Gtk.Align.START;
             value_label.hexpand = true;
             value_label.selectable = true;
             value_label.wrap = true;
+            value_label.wrap_mode = Pango.WrapMode.WORD_CHAR;
+            value_label.max_width_chars = 28;
+            value_label.ellipsize = Pango.EllipsizeMode.END;
+            value_label.lines = 3;
             value_label.add_css_class("meta-value");
 
             grid.attach(lbl, 0, row, 1, 1);
@@ -137,103 +166,96 @@ namespace Danbooru {
         public void display_post(Post post, Api api) {
             this.post = post;
             this.current_api = api;
+            loading_post_id = post.id;
 
             id_label.label = @"Post #$(post.id)";
             rating_value.label = post.display_rating;
             score_value.label = @"$(post.score)";
             dims_value.label = @"$(post.image_width) × $(post.image_height)";
             file_size_value.label = post.file_size_display;
-            source_value.label = post.source != "" ? post.source : "(none)";
-            pixiv_value.label = post.pixiv_id >= 0 ? @"$(post.pixiv_id)" : "(none)";
+            source_value.label = post.source != "" ? post.source : "—";
+            source_value.tooltip_text = post.source;
+            pixiv_value.label = post.pixiv_id >= 0 ? @"$(post.pixiv_id)" : "—";
 
-            // Clear old tags
-            while (true) {
-                var child = tags_container.get_first_child();
-                if (child == null) break;
-                tags_container.remove(child);
-            }
-
-            // Re-add header after clear
-            var tags_header = new Gtk.Label("Tags");
-            tags_header.add_css_class("section-title");
-            tags_header.halign = Gtk.Align.START;
-            tags_container.append(tags_header);
-
-            add_tag_section("General", post.tag_string_general, "general");
-            add_tag_section("Artist", post.tag_string_artist, "artist");
-            add_tag_section("Character", post.tag_string_character, "character");
-            add_tag_section("Copyright", post.tag_string_copyright, "copyright");
-            add_tag_section("Meta", post.tag_string_meta, "meta");
-
+            rebuild_tags();
             load_large_image.begin(api);
         }
 
-        private void add_tag_section(string section_name, string tag_string, string css_class) {
+        private void rebuild_tags() {
+            while (true) {
+                var child = tags_flow.get_child_at_index(0);
+                if (child == null) break;
+                tags_flow.remove(child);
+            }
+
+            // Artist / character / copyright first (most useful), then general, then meta.
+            add_tag_buttons(post.tag_string_artist, "artist");
+            add_tag_buttons(post.tag_string_character, "character");
+            add_tag_buttons(post.tag_string_copyright, "copyright");
+            add_tag_buttons(post.tag_string_general, "general");
+            add_tag_buttons(post.tag_string_meta, "meta");
+        }
+
+        private void add_tag_buttons(string tag_string, string css_class) {
             if (tag_string.strip() == "") return;
 
-            var tags = tag_string.split(" ");
-            var section_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
-            section_box.margin_start = 4;
-
-            var section_lbl = new Gtk.Label(@"$(section_name):");
-            section_lbl.add_css_class("tag-section-label");
-            section_lbl.halign = Gtk.Align.START;
-            section_box.append(section_lbl);
-
-            var tag_flow = new Gtk.FlowBox();
-            tag_flow.selection_mode = Gtk.SelectionMode.NONE;
-            tag_flow.column_spacing = 6;
-            tag_flow.row_spacing = 6;
-            tag_flow.homogeneous = false;
-            tag_flow.max_children_per_line = 1000;
-
-            foreach (var tag in tags) {
-                tag = tag.strip();
+            foreach (var raw in tag_string.split(" ")) {
+                var tag = raw.strip();
                 if (tag == "") continue;
 
                 var btn = new Gtk.Button.with_label(tag.replace("_", " "));
                 btn.add_css_class("tag-button");
                 btn.add_css_class(css_class);
                 btn.tooltip_text = @"Search for '$(tag)'";
-                btn.clicked.connect(() => {
-                    tag_clicked(tag);
-                });
-                tag_flow.append(btn);
+                // Capture tag by value for the closure.
+                var tag_copy = tag;
+                btn.clicked.connect(() => tag_clicked(tag_copy));
+                tags_flow.append(btn);
             }
-
-            section_box.append(tag_flow);
-            tags_container.append(section_box);
         }
 
         private async void load_large_image(Api api) {
+            int64 expected = loading_post_id;
             spinner.visible = true;
             spinner.start();
-            image_widget.set_from_paintable(null);
+            empty_label.visible = false;
+            picture.set_paintable(null);
 
             try {
                 var url = post.large_url;
-                if (url == "") return;
+                if (url == "") {
+                    if (expected == loading_post_id) {
+                        spinner.stop();
+                        spinner.visible = false;
+                        empty_label.label = "No preview available";
+                        empty_label.visible = true;
+                    }
+                    return;
+                }
 
                 var raw_bytes = yield api.download_bytes(url);
+                if (expected != loading_post_id) return;
+
                 var bytes = new GLib.Bytes(raw_bytes);
                 var texture = Gdk.Texture.from_bytes(bytes);
-                image_widget.set_from_paintable(texture);
+                picture.set_paintable(texture);
             } catch (Error e) {
-                warning("Failed to load image for post %lld: %s", post.id, e.message);
+                if (expected != loading_post_id) return;
+                warning("Failed to load image for post %s: %s", post.id.to_string(), e.message);
+                empty_label.label = "Failed to load image";
+                empty_label.visible = true;
             }
 
-            spinner.stop();
-            spinner.visible = false;
+            if (expected == loading_post_id) {
+                spinner.stop();
+                spinner.visible = false;
+            }
         }
 
         private void on_open_browser() {
             if (post == null) return;
-            try {
-                var launcher = new Gtk.UriLauncher(post.page_url);
-                launcher.launch.begin(this.get_root() as Gtk.Window, null);
-            } catch (Error e) {
-                warning("Failed to open URI: %s", e.message);
-            }
+            var launcher = new Gtk.UriLauncher(post.page_url);
+            launcher.launch.begin(this.get_root() as Gtk.Window, null);
         }
 
         private void on_download_original() {
@@ -255,21 +277,19 @@ namespace Danbooru {
                         download_original.begin(file.get_path());
                     }
                 } catch (Error e) {
-                    warning("File dialog error: %s", e.message);
+                    // User cancelled or dialog error
                 }
             });
         }
 
         private async void download_original(string path) {
-            if (current_api == null) return;
+            if (current_api == null || post == null) return;
             try {
                 var url = post.original_url;
                 if (url == "") throw new IOError.NOT_FOUND("No URL");
-
                 yield current_api.download_to_file(url, path);
-                warning("Downloaded to: %s", path);
             } catch (Error e) {
-                warning("Download failed for post %lld: %s", post.id, e.message);
+                warning("Download failed for post %s: %s", post.id.to_string(), e.message);
             }
         }
     }
