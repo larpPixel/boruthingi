@@ -44,43 +44,8 @@ jobs:
         run: meson compile -C build
 
       - name: Upload Binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: danboruthingi-linux
           path: build/danboruthingi
 
-  build-windows:
-    name: Build Windows
-    runs-on: windows
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            git
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-meson
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-vala
-            mingw-w64-x86_64-gtk4
-            mingw-w64-x86_64-libadwaita
-            mingw-w64-x86_64-libsoup3
-            mingw-w64-x86_64-json-glib
-
-      - name: Configure and Build
-        shell: msys2 {0}
-        run: |
-          meson setup build
-          meson compile -C build
-
-      - name: Upload Binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: danboruthingi-windows
-          path: build/danboruthingi.exe
