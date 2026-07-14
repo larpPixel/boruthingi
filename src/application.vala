@@ -16,83 +16,100 @@ namespace Danbooru {
             var css_provider = new Gtk.CssProvider();
             var css = """
                 /* ============================================================
-                   Shared design tokens (dark, dense, gold accent)
+                   Palette — cool slate + soft blue accent
+                   bg #111318 · surface #181b22 · raised #232833
+                   border #333a48 · text #e6e8ee · muted #8b93a2
+                   accent #6ea8fe · on-accent #0b1020
                    ============================================================ */
-                /* bg: #141414 surface: #1a1a1a raised: #222
-                   border: #2e2e2e hover-border: #3a3a3a
-                   text: #d0d0d0 muted: #888 accent: #b8860b */
 
                 window {
-                    background: #141414;
-                    color: #d0d0d0;
+                    background: #111318;
+                    color: #e6e8ee;
                 }
 
                 /* ============================================================
-                   AppBar — one chrome for top, bottom, and detail header
+                   AppBar — compact, even control rhythm
                    ============================================================ */
                 .app-bar {
-                    background: #1a1a1a;
-                    min-height: 44px;
-                    padding: 8px 14px;
+                    background: #181b22;
+                    min-height: 40px;
+                    padding: 5px 12px;
                     border-radius: 0;
                 }
                 .app-bar.top {
-                    border-bottom: 1px solid #2e2e2e;
+                    border-bottom: 1px solid #2a303c;
                     border-top: none;
                 }
                 .app-bar.bottom {
-                    border-top: 1px solid #2e2e2e;
+                    border-top: 1px solid #2a303c;
                     border-bottom: none;
                 }
 
                 .app-bar-sep {
-                    background: #2e2e2e;
+                    background: #3a4252;
                     min-width: 1px;
-                    min-height: 18px;
-                    margin: 0 2px;
+                    min-height: 16px;
+                    margin: 0 4px;
                     opacity: 1;
                 }
 
-                /* Labels that live inside bars */
                 .bar-label {
-                    font-size: 0.75em;
-                    font-family: monospace;
+                    font-size: 0.72em;
                     font-weight: 600;
-                    color: #888888;
-                    letter-spacing: 0.2px;
+                    color: #8b93a2;
+                    letter-spacing: 0.3px;
+                    margin-inline-start: 2px;
+                    margin-inline-end: 0;
                 }
                 .bar-status {
                     font-size: 0.8em;
-                    font-family: monospace;
                     font-weight: 600;
-                    color: #a8a8a8;
-                    min-width: 6em;
+                    color: #a8b0be;
+                    min-width: 5.5em;
+                    padding: 0 2px;
                 }
                 .bar-title {
                     font-size: 0.9em;
-                    font-family: monospace;
-                    font-weight: 700;
-                    color: #d0d0d0;
+                    font-weight: 600;
+                    color: #e6e8ee;
                 }
                 .section-title,
                 .heading {
-                    font-weight: 700;
-                    font-size: 0.95em;
-                    font-family: monospace;
-                    color: #d0d0d0;
+                    font-weight: 600;
+                    font-size: 0.9em;
+                    color: #e6e8ee;
                 }
 
-                /* Controls inside bars share one height */
+                /* One control height across the bar */
                 .app-bar entry,
                 .app-bar searchentry,
                 .app-bar spinbutton,
                 .app-bar dropdown,
                 .app-bar button {
-                    min-height: 30px;
+                    min-height: 28px;
+                    font-size: 0.82em;
+                }
+                .app-bar button {
+                    padding: 0 10px;
+                    min-width: 28px;
+                }
+                /* Icon-only buttons (search, clear, refresh, back) stay square */
+                .app-bar button image {
+                    margin: 0;
+                    padding: 0;
                 }
                 .app-bar switch {
-                    margin-top: 0;
-                    margin-bottom: 0;
+                    margin: 0;
+                }
+                .app-bar dropdown {
+                    min-width: 0;
+                }
+                .app-bar spinbutton {
+                    min-width: 72px;
+                }
+                .app-bar searchentry,
+                .app-bar entry {
+                    padding: 0 8px;
                 }
 
                 /* ============================================================
@@ -102,13 +119,12 @@ namespace Danbooru {
                 searchentry,
                 spinbutton,
                 dropdown {
-                    background: #222222;
-                    color: #d0d0d0;
-                    border: 1px solid #2e2e2e;
-                    border-radius: 3px;
-                    font-family: monospace;
-                    font-size: 0.85em;
-                    min-height: 30px;
+                    background: #232833;
+                    color: #e6e8ee;
+                    border: 1px solid #333a48;
+                    border-radius: 5px;
+                    font-size: 0.82em;
+                    min-height: 28px;
                     box-shadow: none;
                 }
                 entry:focus,
@@ -119,13 +135,13 @@ namespace Danbooru {
                 searchentry:focus-within,
                 spinbutton:focus-within,
                 dropdown:focus-within {
-                    border-color: #b8860b;
+                    border-color: #6ea8fe;
                     outline: none;
-                    box-shadow: 0 0 0 1px alpha(#b8860b, 0.25);
+                    box-shadow: 0 0 0 2px alpha(#6ea8fe, 0.22);
                 }
                 entry selection,
                 searchentry selection {
-                    background: alpha(#b8860b, 0.35);
+                    background: alpha(#6ea8fe, 0.35);
                     color: #ffffff;
                 }
 
@@ -133,43 +149,42 @@ namespace Danbooru {
                    Buttons
                    ============================================================ */
                 button {
-                    background: #222222;
-                    color: #d0d0d0;
-                    border: 1px solid #2e2e2e;
-                    border-radius: 3px;
-                    font-family: monospace;
-                    font-size: 0.85em;
-                    padding: 4px 12px;
-                    min-height: 30px;
+                    background: #232833;
+                    color: #e6e8ee;
+                    border: 1px solid #333a48;
+                    border-radius: 5px;
+                    font-size: 0.82em;
+                    padding: 0 10px;
+                    min-height: 28px;
                     box-shadow: none;
                 }
                 button:hover {
-                    background: #2a2a2a;
-                    border-color: #3a3a3a;
+                    background: #2c3240;
+                    border-color: #454e60;
                 }
                 button:active {
-                    background: #1f1f1f;
+                    background: #1c2029;
                 }
                 button:disabled {
-                    opacity: 0.45;
+                    opacity: 0.4;
                 }
                 button.suggested-action {
-                    background: #b8860b;
-                    color: #111111;
-                    border-color: #9a7209;
-                    font-weight: 700;
+                    background: #6ea8fe;
+                    color: #0b1020;
+                    border-color: #5a96eb;
+                    font-weight: 600;
                 }
                 button.suggested-action:hover {
-                    background: #d4a017;
-                    border-color: #b8860b;
+                    background: #8bbcff;
+                    border-color: #6ea8fe;
                 }
                 button.suggested-action:active {
-                    background: #9a7209;
+                    background: #5a96eb;
                 }
                 button.suggested-action:disabled {
-                    background: #5a4a1a;
-                    border-color: #5a4a1a;
-                    color: #222222;
+                    background: #2a3140;
+                    border-color: #333a48;
+                    color: #6b7384;
                     opacity: 1;
                 }
 
@@ -177,33 +192,33 @@ namespace Danbooru {
                    Switches
                    ============================================================ */
                 switch {
-                    background: #222222;
-                    border: 1px solid #2e2e2e;
-                    border-radius: 14px;
-                    min-width: 40px;
-                    min-height: 22px;
+                    background: #232833;
+                    border: 1px solid #333a48;
+                    border-radius: 12px;
+                    min-width: 36px;
+                    min-height: 20px;
                 }
                 switch:checked {
-                    background: #b8860b;
-                    border-color: #9a7209;
+                    background: #6ea8fe;
+                    border-color: #5a96eb;
                 }
                 switch:hover {
-                    border-color: #3a3a3a;
+                    border-color: #454e60;
                 }
                 switch:checked:hover {
-                    background: #d4a017;
-                    border-color: #b8860b;
+                    background: #8bbcff;
+                    border-color: #6ea8fe;
                 }
                 switch slider {
-                    background: #d0d0d0;
-                    border-radius: 12px;
-                    min-width: 18px;
-                    min-height: 18px;
+                    background: #e6e8ee;
+                    border-radius: 10px;
+                    min-width: 16px;
+                    min-height: 16px;
                     box-shadow: none;
                 }
 
                 /* ============================================================
-                   Thumbnail grid — edge-to-edge flow, cards are the only surface
+                   Thumbnail grid
                    ============================================================ */
                 .post-grid {
                     background: transparent;
@@ -215,20 +230,20 @@ namespace Danbooru {
                     box-shadow: none;
                 }
                 .thumbnail-card {
-                    background: #111111;
-                    border: 1px solid #2e2e2e;
-                    border-radius: 3px;
+                    background: #0e1015;
+                    border: 1px solid #2a303c;
+                    border-radius: 4px;
                     transition: border-color 80ms ease;
                 }
                 .thumbnail-card:hover {
-                    border-color: #b8860b;
+                    border-color: #6ea8fe;
                 }
                 .thumbnail-card.selected {
-                    border-color: #b8860b;
-                    box-shadow: inset 0 0 0 1px #b8860b;
+                    border-color: #6ea8fe;
+                    box-shadow: inset 0 0 0 1px #6ea8fe;
                 }
                 .thumbnail-image {
-                    background: #111111;
+                    background: #0e1015;
                 }
 
                 /* ============================================================
@@ -236,93 +251,94 @@ namespace Danbooru {
                    ============================================================ */
                 .badge {
                     padding: 1px 5px;
-                    border-radius: 2px;
+                    border-radius: 3px;
                     font-size: 0.65em;
                     font-weight: 700;
-                    letter-spacing: 0.4px;
+                    letter-spacing: 0.3px;
                     text-transform: uppercase;
-                    color: #111111;
+                    color: #0b1020;
                     font-family: monospace;
                 }
-                .badge.s { background: #6b8e6b; }
-                .badge.q { background: #b8860b; }
-                .badge.e { background: #a52a2a; }
+                .badge.s { background: #6bbf8a; }
+                .badge.q { background: #e0b44f; }
+                .badge.e { background: #e06c75; }
 
                 .info-pill {
                     padding: 1px 5px;
-                    border-radius: 2px;
+                    border-radius: 3px;
                     font-size: 0.65em;
                     font-weight: 600;
                     font-family: monospace;
-                    background: rgba(0, 0, 0, 0.75);
-                    color: #d0d0d0;
+                    background: alpha(#0b1020, 0.78);
+                    color: #e6e8ee;
                     letter-spacing: 0.2px;
                 }
 
                 /* ============================================================
-                   Detail — stage + rail, not boxes-in-frames
+                   Detail — stage + rail
                    ============================================================ */
                 .detail-stage {
-                    background: #0e0e0e;
+                    background: #0a0c10;
                 }
                 .detail-rail {
-                    background: #1a1a1a;
-                    border-left: 1px solid #2e2e2e;
+                    background: #181b22;
+                    border-left: 1px solid #2a303c;
                     min-width: 280px;
                 }
                 .meta-label {
-                    font-size: 0.72em;
+                    font-size: 0.7em;
                     font-weight: 600;
                     font-family: monospace;
-                    color: #888888;
+                    color: #8b93a2;
                     text-transform: uppercase;
-                    letter-spacing: 0.3px;
+                    letter-spacing: 0.35px;
                 }
                 .meta-value {
                     font-size: 0.85em;
                     font-family: monospace;
-                    color: #d0d0d0;
+                    color: #e6e8ee;
                 }
 
                 /* ============================================================
-                   Tags — flat chips in one flow
+                   Tags
                    ============================================================ */
                 .tag-button {
-                    padding: 3px 9px;
+                    padding: 2px 8px;
                     font-size: 0.78em;
                     font-family: monospace;
-                    border-radius: 3px;
-                    background: #222222;
-                    border: 1px solid #2e2e2e;
-                    color: #d0d0d0;
+                    border-radius: 4px;
+                    background: #232833;
+                    border: 1px solid #333a48;
+                    color: #e6e8ee;
                     min-height: 0;
                 }
                 .tag-button:hover {
-                    background: #2a2a2a;
-                    border-color: #b8860b;
+                    background: #2c3240;
+                    border-color: #6ea8fe;
                 }
                 .tag-button.artist {
-                    border-color: alpha(#cd853f, 0.55);
-                    color: #e0b888;
+                    border-color: alpha(#e0b44f, 0.55);
+                    color: #f0d08a;
                 }
                 .tag-button.character {
-                    border-color: alpha(#6b8e6b, 0.55);
-                    color: #a8c8a8;
+                    border-color: alpha(#6bbf8a, 0.55);
+                    color: #9fd9b4;
                 }
                 .tag-button.copyright {
-                    border-color: alpha(#a0522d, 0.5);
-                    color: #c89878;
+                    border-color: alpha(#c792ea, 0.5);
+                    color: #d4b0f0;
                 }
                 .tag-button.meta {
-                    border-color: alpha(#808080, 0.45);
-                    color: #a0a0a0;
+                    border-color: alpha(#8b93a2, 0.45);
+                    color: #a8b0be;
                 }
+
                 /* ============================================================
-                   Selection checkbox on thumbnails
+                   Selection checkbox
                    ============================================================ */
                 .selection-overlay {
-                    background: rgba(0, 0, 0, 0.55);
-                    border-radius: 3px;
+                    background: alpha(#0b1020, 0.6);
+                    border-radius: 4px;
                 }
 
                 /* ============================================================
@@ -330,35 +346,34 @@ namespace Danbooru {
                    ============================================================ */
                 .suggestion-name {
                     font-size: 0.85em;
-                    font-family: monospace;
-                    color: #d0d0d0;
+                    color: #e6e8ee;
                 }
                 .suggestion-count {
                     font-size: 0.75em;
                     font-family: monospace;
-                    color: #707070;
+                    color: #6b7384;
                 }
                 .suggestion-cat {
                     font-size: 0.65em;
                     font-family: monospace;
                     font-weight: 700;
-                    color: #909090;
+                    color: #8b93a2;
                     text-transform: uppercase;
                 }
 
                 popover contents {
-                    background: #1a1a1a;
-                    border: 1px solid #2e2e2e;
-                    border-radius: 3px;
-                    color: #d0d0d0;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+                    background: #181b22;
+                    border: 1px solid #333a48;
+                    border-radius: 6px;
+                    color: #e6e8ee;
+                    box-shadow: 0 8px 24px alpha(#000000, 0.45);
                 }
                 popover row {
-                    padding: 5px 10px;
-                    border-radius: 2px;
+                    padding: 6px 10px;
+                    border-radius: 4px;
                 }
                 popover row:hover {
-                    background: #252525;
+                    background: #232833;
                 }
 
                 /* ============================================================
@@ -366,37 +381,34 @@ namespace Danbooru {
                    ============================================================ */
                 .download-file-row {
                     padding: 6px 0;
-                    border-bottom: 1px solid #2e2e2e;
+                    border-bottom: 1px solid #2a303c;
                 }
                 .download-file-row:last-child {
                     border-bottom: none;
                 }
                 .download-status-icon {
-                    opacity: 0.8;
+                    opacity: 0.85;
                 }
 
                 /* ============================================================
-                   Status page (empty / error)
+                   Status page
                    ============================================================ */
                 statuspage {
-                    color: #a0a0a0;
+                    color: #a8b0be;
                 }
                 statuspage title {
-                    font-family: monospace;
-                    font-weight: 700;
-                    color: #d0d0d0;
+                    font-weight: 600;
+                    color: #e6e8ee;
                 }
                 statuspage description {
-                    font-family: monospace;
-                    font-size: 0.85em;
-                    color: #888888;
+                    font-size: 0.9em;
+                    color: #8b93a2;
                 }
 
-                /* Kill Libadwaita / GTK default chrome that fights us */
                 actionbar,
                 headerbar {
-                    background: #1a1a1a;
-                    border-color: #2e2e2e;
+                    background: #181b22;
+                    border-color: #2a303c;
                     box-shadow: none;
                 }
             """;

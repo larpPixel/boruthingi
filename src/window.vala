@@ -155,10 +155,10 @@ namespace Danbooru {
             flowbox.valign = Gtk.Align.START;
             flowbox.halign = Gtk.Align.FILL;
             // Padding lives on the flow itself — no Clamp / wrapper margins.
-            flowbox.margin_start = 10;
-            flowbox.margin_end = 10;
-            flowbox.margin_top = 10;
-            flowbox.margin_bottom = 10;
+            flowbox.margin_start = 8;
+            flowbox.margin_end = 8;
+            flowbox.margin_top = 8;
+            flowbox.margin_bottom = 8;
             grid_scroll.child = flowbox;
             grid_stack.add_named(grid_scroll, "grid");
 

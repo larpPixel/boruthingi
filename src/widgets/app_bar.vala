@@ -47,7 +47,7 @@ namespace Danbooru {
         }
 
         private static Gtk.Box make_slot() {
-            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 8);
+            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
             box.valign = Gtk.Align.CENTER;
             return box;
         }
