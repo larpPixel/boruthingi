@@ -1,0 +1,29 @@
+{
+  "source": "jR4dh3y/boruthingi",
+  "source_url": "https://git.jr4.in/jR4dh3y/boruthingi",
+  "destination": "larpPixel/boruthingi",
+  "visibility": "public",
+  "default_branch": "main",
+  "original_git_refs": {
+    "source": "jR4dh3y/boruthingi",
+    "name": "boruthingi",
+    "private": false,
+    "source_present": true,
+    "branches": {
+      "refs/heads/main": "ce61261b72c2865fb62bd3064c5bdb4fe337a9b5"
+    },
+    "tags": {
+      "refs/tags/build-1a12025": "ce61261b72c2865fb62bd3064c5bdb4fe337a9b5",
+      "refs/tags/build-ce61261": "ce61261b72c2865fb62bd3064c5bdb4fe337a9b5",
+      "refs/tags/test-tea-cli": "1a120251541a2fdf4b0005f4cfe3828805fe03cf",
+      "refs/tags/test-tea-v2": "1a120251541a2fdf4b0005f4cfe3828805fe03cf",
+      "refs/tags/test-tea-v3": "1a120251541a2fdf4b0005f4cfe3828805fe03cf"
+    },
+    "other_refs": {},
+    "oversized_blobs": []
+  },
+  "github_archival_ref_mapping": {},
+  "discussion_mapping": {},
+  "recovered_refs": {},
+  "limitations": []
+}
